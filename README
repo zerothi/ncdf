@@ -1,0 +1,116 @@
+NCDF    -*- mode: org; -*-
+
+This document is best viewed in org-mode of Emacs (or the equivalent mode in vim).
+
+
+* Author
+
+The creator of this library is:
+- Nick Papior Andersen
+
+It was authored as a way to ease NetCDF handling in the [[http://icmab.cat/leem/siesta/][SIESTA]] DFT package.
+It has proven quite useful as the necessity to switch between MPI and non-MPI [[http://www.unidata.ucar.edu/software/netcdf/][NetCDF]] is extremely easy.
+
+* What does it do?
+
+Presently it is only a wrapper module for the [[http://www.unidata.ucar.edu/software/netcdf/][NetCDF]] library.
+It is meant as a substitution for various lengthy calls for assigning variables etc in FORTRAN code.
+
+** Pure NetCDF
+The standard v3 of NetCDF is fully supported and one can directly benefit from this module by
+compressing the required code for using NetCDF.
+
+** NetCDF 4
+Compression of the NetCDF files is allowed.
+
+** Parallel NetCDF
+Allowance of the MPI layer to do parallel IO is allowed by either of the two methods:
+
+- [[http://ftp.mcs.anl.gov/pub/parallel-netcdf/parallel-netcdf-1.3.1.tar.bz2][parallel-netcdf]] allows doing parallel IO in the NetCDF 3 standard
+- NetCDF 4 API allows intrinsic parallel IO
+
+
+* Basic information regarding the usage
+
+When dealing with the ncdf API you are changing quite some stuff.
+Essentially, you are required to utilize the feature set of Fortran 90/95.
+I.e. derived types.
+
+The compilation of the ncdf library is performed through a couple of 
+preprocessor flags.
+They are all prefixed with NCDF_ to not interfere with any custom flags.
+
+- MPI, allows for communicators and should be used for any code which
+  uses MPI.
+  It does not requires to have either CDDF4, nor the PCDF flag.
+  Flag: NCDF_MPI
+- CDF4 allow the NetCDF 4 API for compression and the MPI layer with 
+  the MPI flag.
+  Flag: NCDF_CDF4
+- PCDF, allows for the NetCDF 3 API for using the parallel IO as an
+  additional layer.
+  Note: this requires the MPI flag.
+  Flag: NCDF_PCDF
+
+* Coding usage
+
+To ease the conversion back and forth between the NetCDF API and the ncdf API the names are very
+similar.
+
+An easy remembering rule is that "nf90" has changed to "ncdf".
+
+Here we provide a list which shows the details of the name-conversions
+ - ncdf_open           (nf90_open)
+ - ncdf_close          (nf90_close)
+ - ncdf_enddef         (nf90_enddef)
+ - ncdf_redef          (nf90_redef)
+ - ncdf_sync           (nf90_sync)
+ - ncdf_inq            (nf90_inquire)
+ - ncdf_def_dim        (nf90_def_dim)
+ - ncdf_inq_dim        (nf90_inq_dim, nf90_inq_dimid, nf90_inquire_dimension)
+ - ncdf_rename_dim     (nf90_rename_dim)
+ - ncdf_def_var        (nf90_def_var)
+ - ncdf_inq_var        (nf90_inq_var, nf90_inq_varid, nf90_inquire_variable)
+ - ncdf_put_att        (nf90_put_att)
+ - ncdf_put_gatt       (nf90_put_att(..,nf90_global,...))
+ - ncdf_get_att        (nf90_get_att)
+ - ncdf_get_gatt       (nf90_get_att(..,nf90_global,...))
+ - ncdf_del_att        (nf90_del_att)
+ - ncdf_del_gatt       (nf90_del_att(..,nf90_global,...))
+
+Basically there was a couple of issues that was troubling the author.
+
+1. Using inq_dim, inq_dimid, inquire_dimension didn't seem obvious to me.
+   Hence everything is fetched from one inquire routine. (inq_dim)
+2. The same thing applied for the inq_var, inq_varid and inquire_variable
+3. Global variables I thought should be able to be denoted specifically.
+   Simply because of code clarity. However, the old method of NF90_GLOBAL
+   is still allowed (basically the gatt routines are wrappers with the 
+   NF90_GLOBAL argument).
+4. For consistency I have renamed everything which uses the inquire suffix to inq
+
+** Code Example
+Here is the simple example:
+
+#+begin_src fortran
+type(hNCDF) :: nf
+
+call ncdf_create(nf,'Test.nc')
+call ncdf_def_dim(nf,'MD',100)
+call ncdf_def_var(nf,'E',NF90_DOUBLE,(/'MD'/))
+call ncdf_put_var(nf,'E',E)
+call ncdf_close(nf)
+#+end_src
+
+
+* TODO
+- Consider changing the parallel logical to an integer to have several layers of interactions
+- Add to the original NetCDF the VAR_FILL routines (they are only defined in the INTEGER part)
+- Add an ncdf_assert (which can take several options)
+  1. check that certain variables exists
+  2. check dimension sizes...
+- Add a ncdf_dim function which returns a dimension array
+  with correct formatting... ncdf_dim('a', 'oesntuh') > (/'a     ','oesntuh'/)
+- Scour the NetCDF manual and add missing stuff
+- Fully determine whether the dictionary is the right way to go. It appears to be 
+  a great solution for the character attributes, however, it could be extended.
