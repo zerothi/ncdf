@@ -1,0 +1,19 @@
+
+
+* Change log
+
+Every section in this part lists the change of the versions
+
+* Feature
+
+** <2013-08-29 Thu>
+
+- [ ] Variable filling of specific values
+      I.e. add arguments to ncdf_def_var, etc
+- [ ] <<inq_fill>> Adding FILL to the inquiry routines
+      ncdf_inq(ncdf,...)
+
+- [ ] [[inq_fill]] Consider changing the routine name ncdf_fill
+      to something more meaning full
+      Should probably be deprecated when implementing
+      the inquiry fill statement
