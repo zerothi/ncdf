@@ -8,47 +8,11 @@ code_file="ncdf_code.f90"
 
 rm -f $interface_file $code_file
 
+source fortran.sh
+
 types="complex real integer"
 
-function get_precisions {
-    if [ "$1" == "complex" ]; then
-	echo -n "dp"
-    elif [ "$1" == "real" ]; then
-	echo -n "sp dp"
-    elif [ "$1" == "integer" ]; then
-	echo -n "is il"
-    elif [ "$1" == "logical" ]; then
-	echo -n "none"
-    else
-	exit 1
-    fi
-}
-
-function get_dimensions {
-    if [ "$1" == "complex" ]; then
-	echo -n "1 2"
-    elif [ "$1" == "real" ]; then
-	echo -n "0 1 2"
-    elif [ "$1" == "integer" ]; then
-	echo -n "0 1 2"
-    else
-	exit 1
-    fi
-}
-
-# Takes four arguments
-# $1 Routine name
-# $2 variable type
-# $3 variable precision
-# $4 variable dimension
-function get_routine_name {
-    local name="ncdf"
-    [ ! -z "$1" ] && name="${name}_$1"
-    [ ! -z "$2" ] && name="${name}_${2:0:1}"
-    [ ! -z "$3" ] && name="${name}_$3"
-    [ ! -z "$4" ] && name="${name}_$4D"
-    echo -n "$name"
-}
+_ROUTINE_NAME=ncdf
 
 current_routine_name=""
 function new_routine {
@@ -71,58 +35,6 @@ function end_routine {
     current_routine_name=""
 }
     
-function add_var_declaration {
-    local n="" ; local t=""
-    local d="" ; local p=""
-    local s="" ; local p=""
-    local extra="" ; local alloc=0
-    while [ $# -gt 0 ]; do
-	# Process what is requested
-	local opt="$1"
-	case $opt in
-	    --*) opt=${opt:1} ;;
-	esac
-	shift
-	case $opt in
-            -name)         n="$1" ; shift ;;
-            -logical|-log)    t="logical" ;;
-            -int|-integer)    t="integer" ;;
-            -r|-real)         t="real"  ;;
-            -c|-complex)      t="complex" ;;
-            -char|-character) t="character(len=*)"  ;;
-            -type)            t="type($1)" ; shift ;;
-            -dimension)  [ "$1" != "0" ] && d="$1" ; shift ;;
-            -size)       [ "$1" != "0" ] && s="$1" ; shift ;;
-            -precision)  [ "$1" != "none" ] && p="$1" ; shift ;;
-            -opt|-optional)   extra="$extra, optional" ;;
-            -alloc|-allocatable)   alloc=1 ; extra="$extra, allocatable" ;;
-            -pointer)   alloc=1 ; extra="$extra, pointer" ;;
-            -in)   extra="$extra, intent(in)"  ;;
-            -out)   extra="$extra, intent(out)"  ;;
-            -inout)   extra="$extra, intent(inout)"  ;;
-	esac
-    done
-    if [ ! -z "$d" ]; then
-	local tmp=""
-	for i in `seq 1 $d` ; do
-	    tmp="$tmp,:"
-	done
-	d="(${tmp:1})"
-	#d="($d)"
-    else
-	# If the dimension is zero...
-	extra="${extra//, allocatable/}"
-	extra="${extra//, pointer/}"
-    fi
-    if [ ! -z "$s" ]; then
-	d="($s)"
-    fi	
-    [ ! -z "$p" ] && \
-	p="($p)"
-    echo "    $t$p$extra :: $n$d"
-}
-    
-
 function add_var_allocation {
     local n=""
     local d=0

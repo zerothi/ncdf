@@ -4,9 +4,6 @@ program test_ncdf
 #ifdef PCDF
   use mpi
 #endif
-#ifdef PWIRE
-  use pwire
-#endif
 
   implicit none
   
@@ -20,9 +17,6 @@ program test_ncdf
   end interface c_interface
 
   type(hNCDF) :: ncdf
-#ifdef PWIRE
-  type(hWIRE) :: wire
-#endif
   integer :: Node, Nodes, i
   character(len=1) :: ci
 #ifdef PCDF
@@ -40,50 +34,25 @@ program test_ncdf
 !  i = nf90_set_log_level(3)
   call ncdf_IOnode(Node == 0)
 
-#ifdef PWIRE
-#ifdef PCDF
-  call WIRE_init(wire,COMM=MPI_Comm_World)
-#else
-  call WIRE_init(wire)
-#endif
-  call WIRE_print(wire)
-#endif
-
-
   call goto_dir('first')
   write(*,*)
   call test_seq3()
   write(*,*)
   call test_seq4()
   write(*,*)
-!  call test_par3()
+  call test_par3()
   write(*,*)
   call test_par4()
-  write(*,*)
-!  call test_pwire3()
-  write(*,*)
-!  call test_pwire4()
   write(*,*)
   call chdir('..')
 
   write(ci,'(i1)') mod(Node,2)
   call goto_dir('IO'//ci)
 
-#ifdef PWIRE
-#ifdef PCDF
-  call WIRE_init(wire,COMM=MPI_Comm_World)
-#else
-  call WIRE_init(wire)
-#endif
-  call WIRE_print(wire)
-#endif
-
   call test_seq3()
   call test_seq4()
-!  call test_par3()
-!  call test_par4()
-!  call test_pwire3()
-!  call test_pwire4()
+  call test_par3()
+  call test_par4()
   call chdir('..')
 
 #ifdef MPI
@@ -122,9 +91,6 @@ contains
 
   subroutine test_seq3()
     call show_where('In ncdf3 Sequential')
-#ifdef PWIRE
-    call ncdf_detach_wire(ncdf)
-#endif
     call ncdf_create(ncdf,'NCDF3_seq.nc',mode=NF90_64BIT_OFFSET,overwrite=.true.)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
@@ -150,9 +116,6 @@ contains
     type(hNCDF):: grp1,grp2
 #ifdef CDF4
     call show_where('In ncdf4 Sequential')
-#ifdef PWIRE
-    call ncdf_detach_wire(ncdf)
-#endif
     call ncdf_create(ncdf,'NCDF4_seq.nc',mode=NF90_NETCDF4,overwrite=.true.)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
@@ -188,10 +151,6 @@ contains
   subroutine test_par3()
 #ifdef PCDF
     call show_where('In ncdf3 parallel')
-#ifdef PWIRE
-    call ncdf_detach_wire(ncdf)
-#endif
-!    call ncdf_create(ncdf,'NCDF3_par.nc',mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET),overwrite=.true.,comm=MPI_Comm_world)
     call ncdf_create(ncdf,'NCDF3_par.nc',mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET),overwrite=.true.,comm=MPI_Comm_world)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
@@ -222,9 +181,6 @@ contains
     use netcdf
 #ifdef PCDF
     call show_where('In ncdf4 parallel')
-#ifdef PWIRE
-    call ncdf_detach_wire(ncdf)
-#endif
     call ncdf_create(ncdf,'NCDF4_par.nc',mode=NF90_MPIIO,overwrite=.true.,comm=MPI_Comm_World)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
@@ -249,66 +205,5 @@ contains
 #endif
   end subroutine test_par4
 
-#ifdef PWIRE
-  subroutine test_pwire3()
-    call ncdf_attach_wire(ncdf,wire)
-    call ncdf_create(ncdf,'NCDF3_wire.nc',mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET),overwrite=.true.)
-    call ncdf_def_dim(ncdf,'x',1)
-    call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
-    call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'What is this'))
-    do i = 1 , 10
-       if ( mod(i,wire%IO_NS) == wire%IO_N ) then
-          call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
-       end if
-    end do
-    ! redefining a NetCDF file after already ending the definition step is ONLY 
-    ! allowed in NetCDF 3 formats...
-    call ncdf_def_dim(ncdf,'z',2)
-    call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'Height'))
-    do i = 1 , 10
-       if ( mod(i,wire%IO_NS) == wire%IO_N ) then
-          call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
-       end if
-    end do
-    call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
-  end subroutine test_pwire3
-
-  subroutine test_pwire4()
-#ifdef CDF4
-    call ncdf_attach_wire(ncdf,wire)
-    call ncdf_create(ncdf,'NCDF4_par.nc',mode=IOR(NF90_MPIIO,NF90_NETCDF4),overwrite=.true.)
-    call ncdf_def_dim(ncdf,'x',1)
-    call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
-    call ncdf_def_dim(ncdf,'z',2)
-    call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'What is this'))!,compress_lvl=3)
-    call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'Height'))!,compress_lvl=3)
-    do i = 1 , 10
-       if ( mod(i,wire%IO_NS) == wire%IO_N ) then
-          call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
-       end if
-    end do
-    do i = 1 , 10
-       if ( mod(i,wire%IO_NS) == wire%IO_N ) then
-          call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
-       end if
-    end do
-    call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
-#endif
-  end subroutine test_pwire4
-
-#else
-  subroutine test_pwire3()
-  end subroutine test_pwire3
-  subroutine test_pwire4()
-  end subroutine test_pwire4
-  
-#endif
-  
 end program test_ncdf
 
