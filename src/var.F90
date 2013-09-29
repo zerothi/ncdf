@@ -44,7 +44,7 @@ program test
   type(var) :: va , vb
   real(dp) :: a, b(2), c(2,2)
   real(dp), pointer :: pa =>null(), pb(:)=>null(), pc(:,:)=>null()
-
+  character(len=20) :: ca, cb
   a = 1.0_dp
   b = 2._dp
   c = 3._dp
@@ -67,6 +67,13 @@ program test
   va = 1
   print *,va%t,va%i0
 
+
+  ca = 'hello world'
+  va = ca
+
+  cb = va
+  print *,cb
+  
 
 end program test
 #endif

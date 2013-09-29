@@ -31,6 +31,8 @@ function get_precisions {
 	_ps "is il"
     elif [ "$1" == "logical" ]; then
 	_ps "none"
+    elif [ "$1" == "character" ]; then
+	_ps "none"
     else
 	exit 1
     fi
@@ -41,7 +43,7 @@ _var[complex]=cz
 _var[real]=sd 
 _var[integer]=il 
 _var[logical]=b
-_var[character]=s
+_var[character]=a
 
 function get_variable_short {
     if [ "$2" == "dp" ]; then
@@ -64,6 +66,8 @@ function get_dimensions {
 	_ps "0 1 2"
     elif [ "$1" == "logical" ]; then
 	_ps "0 1 2"
+    elif [ "$1" == "character" ]; then
+	_ps "1"
     else
 	exit 1
     fi
@@ -102,7 +106,14 @@ function add_var_declaration {
             -int|-integer)    t="integer" ;;
             -r|-real)         t="real"  ;;
             -c|-complex)      t="complex" ;;
-            -char|-character) t="character(len=*)"  ;;
+            -char|-character) 
+		case $1 in
+		    --*) opt="(len=*)" ;;
+		    -*) opt="(len=*)" ;;
+		    *) opt="$1" ; shift ;;
+		esac
+		t="character$opt"
+		;;
             -type)            t="type($1)" ; shift ;;
             -dimension)  [ "$1" != "0" ] && d="$1" ; shift ;;
             -size)       [ "$1" != "0" ] && s="$1" ; shift ;;
@@ -127,7 +138,7 @@ function add_var_declaration {
     fi	
     [ ! -z "$p" ] && \
 	p="($p)"
-    _ps "    $t$p$extra :: $n$d"
+    _ps "$t$p$extra :: $n$d"
     [ $newline -eq 1 ] && printf "\n"
 }
     

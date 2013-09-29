@@ -4,6 +4,11 @@
 
 Every section in this part lists the change of the versions
 
+* Dictionary
+
+The dictionary will make use of the var format for retaining any type of
+data. This will allow for greater structure etc.
+
 * Feature
 
 ** <2013-08-29 Thu>
