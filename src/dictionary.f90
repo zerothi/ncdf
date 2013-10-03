@@ -12,8 +12,8 @@ module dictionary
   private
 
   public :: dict
-  ! Create a dict type: 'key' .KV. 'val'
-  public :: operator(.KV.)
+  ! Create a dict type: 'key' .KV. 'val', 'key' .KP. 'pointer'
+  public :: operator(.KV.), operator(.KP.)
   ! Retrieve the value of a list of dicts by searching for a key: type(dict)(:) .LU. 'a' (returns .VAL. from 'a'.KV.'val')
   ! 'Look-Up'
   public :: operator( .LU. ), operator( .LOOKUP. )

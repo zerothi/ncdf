@@ -26,11 +26,13 @@ contains
   subroutine delete(this)
     type(var), intent(inout) :: this
     include 'var_delete.inc'
+    this%t = '  '
   end subroutine delete
 
   subroutine nullify(this)
     type(var), intent(inout) :: this
     include 'var_nullify.inc'
+    this%t = '  '
   end subroutine nullify
 
   include 'var_funcs.inc'
@@ -45,33 +47,34 @@ program test
   real(dp) :: a, b(2), c(2,2)
   real(dp), pointer :: pa =>null(), pb(:)=>null(), pc(:,:)=>null()
   character(len=20) :: ca, cb
+  logical :: success
+
   a = 1.0_dp
   b = 2._dp
   c = 3._dp
 
-  va = a
+  call assign(va,a)
   print *,va%t,va%d0
-  if ( associate(pa,va) ) then
+  call associate(pa,va,success=success)
+  if ( success ) then
      print *,'Success: ',pa
   end if
-  if ( .not. associate(va,pb) ) then
-     print *, 'Can not associate'
-  end if
-  va = b
-  va = b
-  b = va
+
+  call assign(va,b)
+  call assign(b,va)
   print *,va%t,va%d1
-  va = c
+
+  call assign(va,c)
   print *,va%t,va%d2
 
-  va = 1
+  call assign(va,1)
   print *,va%t,va%i0
 
 
   ca = 'hello world'
-  va = ca
+  call assign(va,ca)
 
-  cb = va
+  call assign(cb,va)
   print *,cb
   
 
