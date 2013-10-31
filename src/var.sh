@@ -121,8 +121,7 @@ function check_size {
     for i in `seq 1 $dim` ; do
 	_ps "size($v,$i) == size($data,$i)"
 	if [ $i -lt $dim ]; then
-	    _ps " .and. &"
-	    _nl
+	    _psnl " .and. &"
 	fi
     done
 }
@@ -150,7 +149,7 @@ for typ in $types ; do
     done
 done
 # We only allow 1D chars
-_ps "character, pointer :: a1(:)" ; _nl
+_psnl "character, pointer :: a1(:)=>null()"
 } >> $type_file
 
 
@@ -158,21 +157,18 @@ _ps "character, pointer :: a1(:)" ; _nl
 # Create the function interface for assign associate
 {
 for int in assign associate ; do
-    _ps "interface $int" ; _nl
+    _psnl "interface $int"
     for typ in character $types ; do
 	for prec in $(get_precisions $typ) ; do
 	    
 	    for dim in $(get_dimensions $typ) ; do
-		_ps "  module procedure ${int}_get_$(get_variable_short $typ $prec)$dim"
-		_nl
-		_ps "  module procedure ${int}_set_$(get_variable_short $typ $prec)$dim"
-		_nl
+		_psnl "  module procedure ${int}_get_$(get_variable_short $typ $prec)$dim"
+		_psnl "  module procedure ${int}_set_$(get_variable_short $typ $prec)$dim"
 	    done
 	    
 	done
     done
-    _ps 'end interface'
-    _nl ; _nl
+    _psnl 'end interface'
 done
 } >> $mod_file
 
@@ -191,24 +187,24 @@ for typ in $types ; do
   for dim in $(get_dimensions $typ) ; do
 
       tmp_func() {
-	  local i
-	  if [ $1 -eq 0 ]; then
-	      _ps "allocate(this%$v)" ; _nl
-	  else
-	      _ps "allocate(this%$v("
-	      for i in `seq 1 $1` ; do
-		  _ps "size(rhs,$i)"
-		  [ $i -lt $1 ] && _ps ","
-		  done
-	      _ps "))" ; _nl
-	  fi
+          local i
+          if [ $1 -eq 0 ]; then
+              _ps "allocate(this%$v)" ; _nl
+          else
+              _ps "allocate(this%$v("
+              for i in `seq 1 $1` ; do
+                  _ps "size(rhs,$i)"
+                  [ $i -lt $1 ] && _ps ","
+              done
+              _ps "))" ; _nl
+          fi
       }
-      
+
       v=$(get_variable_short $typ $prec)$dim
       sub_name=${int}_$(get_variable_short $typ $prec)$dim
 
       # ----- create the routine
-      _ps "subroutine $sub_name(this,rhs,dealloc)" ; _nl
+      _psnl "subroutine $sub_name(this,rhs,dealloc)"
       
       # this variable
       add_var_declaration -type var -inout -name this
@@ -220,44 +216,131 @@ for typ in $types ; do
       add_var_declaration -logical -name ldealloc
 
       # We have two scenarios:
-      _ps "ldealloc = .true." ; _nl
-      _ps "if(present(dealloc))ldealloc = dealloc" ; _nl
+      _psnl "ldealloc = .true."
+      _psnl "if(present(dealloc))ldealloc = dealloc"
 
-      _ps "if (.not. ldealloc) then" ; _nl
+      _psnl "if (.not. ldealloc) then"
       # If the user has requested to not deallocate
       # we assume that the user wishes to retain the address-space
-      _ps "call nullify(this)" ; _nl
-      _ps "this%t = '$v'" ; _nl
+      _psnl "call nullify(this)"
+      _psnl "this%t = '$v'"
       tmp_func $dim
-      _ps "this%$v = rhs" ; _nl
-      _ps "return" ; _nl
-      _ps "end if" ; _nl
+      _psnl "this%$v = rhs"
+      _psnl "return"
+      _psnl "end if"
       # Else the variable should be de-allocated
       # We only deallocate if the type is not the same
-      _ps "ldealloc = this%t /= '$v'" ; _nl
+      _psnl "ldealloc = this%t /= '$v'"
       if [ $dim -gt 0 ]; then
 	  # We have that * == #
 	  # we will only deallocate if the dimensions does not match
-	  _ps "if (.not.ldealloc) then" ; _nl
+	  _psnl "if (.not.ldealloc) then"
 	  _ps "ldealloc = "
 	  check_size "this%$v" rhs $dim ; _nl
-	  _ps "end if" ; _nl
+	  _psnl "end if"
       fi
 
-      _ps "if (ldealloc) then" ; _nl
+      _psnl "if (ldealloc) then"
       # deallocate
-      _ps "call delete(this)" ; _nl # we can safely delete
-      _ps "this%t = '$v'" ; _nl
+      _psnl "call delete(this)" # we can safely delete
+      _psnl "this%t = '$v'"
       tmp_func $dim
-      _ps "end if" ; _nl
+      _psnl "end if"
       
       # We know know that we may overwrite the data...
-      _ps "this%$v = rhs" ; _nl
+      _psnl "this%$v = rhs"
 
-      _ps "end subroutine $sub_name" ; _nl
+      _psnl "end subroutine $sub_name"
   done
  done
 done
+
+# ----- create the routine
+_psnl "subroutine assign_var(lhs,rhs,dealloc)"
+# this variable
+add_var_declaration -type var -inout -name lhs
+add_var_declaration -type var -in    -name rhs
+# assignment variable
+add_var_declaration -nocheck -$typ -precision $prec \
+    -dimension $dim -in -name rhs
+add_var_declaration -logical -in -optional -name dealloc
+add_var_declaration -logical -name ldealloc
+# We have two scenarios:
+_psnl "ldealloc = .true."
+_psnl "if(present(dealloc))ldealloc = dealloc"
+_psnl "if (.not. ldealloc) then"
+# If the user has requested to not deallocate
+# we assume that the user wishes to retain the address-space
+_psnl "call nullify(lhs)"
+_psnl "lhs%t = rhs%t"
+used=0
+tmp_func() {
+    local i
+    if [ $1 -eq 0 ]; then
+	_psnl "allocate(lhs%$v)"
+    else
+	_ps "allocate(lhs%$v("
+	for i in `seq 1 $1` ; do
+	    _ps "size(rhs%$v,$i)"
+	    [ $i -lt $1 ] && _ps ","
+	done
+	_psnl "))"
+    fi
+}
+for typ in $types ; do
+  for prec in $(get_precisions $typ) ; do
+    for dim in $(get_dimensions $typ) ; do
+      v=$(get_variable_short $typ $prec)$dim
+      if [ $used -eq 0 ]; then
+	  used=1
+      else
+	  _ps "else "
+      fi
+      _psnl "if(rhs%t=='$v')then"
+      tmp_func $dim
+      _psnl "lhs%$v = rhs%$v"
+      
+    done
+  done
+done
+_psnl "end if"
+
+for typ in $types ; do
+ for prec in $(get_precisions $typ) ; do
+  for dim in $(get_dimensions $typ) ; do
+
+      tmp_func $dim
+      _psnl "this%$v = rhs"
+      _psnl "return"
+      _psnl "end if"
+      # Else the variable should be de-allocated
+      # We only deallocate if the type is not the same
+      _psnl "ldealloc = this%t /= '$v'"
+      if [ $dim -gt 0 ]; then
+	  # We have that * == #
+	  # we will only deallocate if the dimensions does not match
+	  _psnl "if (.not.ldealloc) then"
+	  _ps "ldealloc = "
+	  check_size "this%$v" rhs $dim ; _nl
+	  _psnl "end if"
+      fi
+
+      _psnl "if (ldealloc) then"
+      # deallocate
+      _psnl "call delete(this)" # we can safely delete
+      _psnl "this%t = '$v'"
+      tmp_func $dim
+      _psnl "end if"
+      
+      # We know know that we may overwrite the data...
+      _psnl "this%$v = rhs"
+
+      _psnl "end subroutine $sub_name"
+  done
+ done
+done
+
+
 
 # Here we create the function for the assignment overload
 typ=character
@@ -267,7 +350,7 @@ dim=$(get_dimensions $typ)
 int=assign_set
 v=$(get_variable_short $typ $prec)$dim
 sub_name=${int}_$(get_variable_short $typ $prec)$dim
-    _ps "subroutine $sub_name(this,rhs,dealloc)" ; _nl
+    _psnl "subroutine $sub_name(this,rhs,dealloc)"
     
     add_var_declaration -type var -inout -name this
     add_var_declaration -nocheck -$typ -precision $prec \
@@ -277,23 +360,23 @@ sub_name=${int}_$(get_variable_short $typ $prec)$dim
     add_var_declaration -int -name i
    
     # We have two scenarios:
-    _ps "ldealloc = .true." ; _nl
-    _ps "if(present(dealloc))ldealloc = dealloc" ; _nl
+    _psnl "ldealloc = .true."
+    _psnl "if(present(dealloc))ldealloc = dealloc"
     
-    _ps "if (.not. ldealloc) then" ; _nl
+    _psnl "if (.not. ldealloc) then"
     # If the user has requested to not deallocate
     # we assume that the user wishes to retain the address-space
-    _ps "call nullify(this)" ; _nl
-    _ps "this%t = '$v'" ; _nl
-    _ps "allocate(this%$v(len_trim(rhs)))" ; _nl
-    _ps "do i = 1 , len_trim(rhs)" ; _nl
-    _ps "this%$v(i) = rhs(i:i)" ; _nl
-    _ps "end do" ; _nl
-    _ps "return" ; _nl
-    _ps "end if" ; _nl
+    _psnl "call nullify(this)"
+    _psnl "this%t = '$v'"
+    _psnl "allocate(this%$v(len_trim(rhs)))"
+    _psnl "do i = 1 , len_trim(rhs)"
+    _psnl "this%$v(i) = rhs(i:i)"
+    _psnl "end do"
+    _psnl "return"
+    _psnl "end if"
     # Else the variable should be de-allocated
     # We only deallocate if the type is not the same
-    _ps "ldealloc = this%t /= '$v'" ; _nl
+    _psnl "ldealloc = this%t /= '$v'"
     if [ $dim -gt 0 ]; then
         # We have that * == #
         # we will only deallocate if the dimensions does not match
@@ -302,18 +385,18 @@ sub_name=${int}_$(get_variable_short $typ $prec)$dim
 	_nl
     fi
 
-    _ps "if (ldealloc) then" ; _nl
-    _ps "call delete(this)" ; _nl
-    _ps "this%t = '$v'" ; _nl
+    _psnl "if (ldealloc) then"
+    _psnl "call delete(this)"
+    _psnl "this%t = '$v'"
     # Add allocation statement
-    _ps "allocate(this%$v(len_trim(rhs)))" ; _nl
-    _ps "end if" ; _nl
+    _psnl "allocate(this%$v(len_trim(rhs)))"
+    _psnl "end if"
     
-    _ps "do i = 1 , len_trim(rhs)" ; _nl
-    _ps "this%$v(i) = rhs(i:i)" ; _nl
-    _ps "end do" ; _nl
+    _psnl "do i = 1 , len_trim(rhs)"
+    _psnl "this%$v(i) = rhs(i:i)"
+    _psnl "end do"
     
-    _ps "end subroutine $sub_name" ; _nl
+    _psnl "end subroutine $sub_name"
 } >> $func_file
 
 # Create the set functions
@@ -324,7 +407,7 @@ int=associate_set
       for dim in $(get_dimensions $typ) ; do
 	  v=$(get_variable_short $typ $prec)$dim
 	  sub_name=${int}_$(get_variable_short $typ $prec)$dim
-	  _ps "subroutine $sub_name(this,rhs,dealloc)" ; _nl
+	  _psnl "subroutine $sub_name(this,rhs,dealloc)"
 	  
 	   # this variable
 	  add_var_declaration -type var -inout -name this
@@ -336,18 +419,18 @@ int=associate_set
 	  add_var_declaration -logical -name ldealloc
 
 	  # We have two scenarios:
-	  _ps "ldealloc = .false." ; _nl
-	  _ps "if(present(dealloc))ldealloc = dealloc" ; _nl
+	  _psnl "ldealloc = .false."
+	  _psnl "if(present(dealloc))ldealloc = dealloc"
 
-	  _ps "if (ldealloc) then" ; _nl
-	  _ps "call delete(this)" ; _nl
-	  _ps "else" ; _nl
-	  _ps "call nullify(this)" ; _nl
-	  _ps "end if" ; _nl
-	  _ps "this%t = '$v'" ; _nl
-	  _ps "this%$v => rhs" ; _nl
+	  _psnl "if (ldealloc) then"
+	  _psnl "call delete(this)"
+	  _psnl "else"
+	  _psnl "call nullify(this)"
+	  _psnl "end if"
+	  _psnl "this%t = '$v'"
+	  _psnl "this%$v => rhs"
 	  
-	  _ps "end subroutine $sub_name" ; _nl
+	  _psnl "end subroutine $sub_name"
       done
      done
     done
@@ -365,7 +448,7 @@ for int in assign_get ; do
       for dim in $(get_dimensions $typ) ; do
 	  v=$(get_variable_short $typ $prec)$dim
 	  sub_name=${int}_$(get_variable_short $typ $prec)$dim
-	  _ps "subroutine $sub_name(lhs,this,success)" ; _nl
+	  _psnl "subroutine $sub_name(lhs,this,success)"
 
 	  add_var_declaration -nocheck -$typ -precision $prec \
 	      -out -dimension $dim -name lhs
@@ -373,17 +456,17 @@ for int in assign_get ; do
 	  add_var_declaration -logical -out -optional -name success
 	  add_var_declaration -logical -name lsuccess
 	  
-	  _ps "lsuccess = this%t=='$v'" ; _nl
-	  _ps "if (lsuccess) then" ; _nl
+	  _psnl "lsuccess = this%t=='$v'"
+	  _psnl "if (lsuccess) then"
 	  for i in `seq 1 $dim` ; do
-	      _ps "lsuccess = lsuccess .and. size(this%$v,$i)==size(lhs,$i)" ; _nl
+	      _psnl "lsuccess = lsuccess .and. size(this%$v,$i)==size(lhs,$i)"
 	  done
-	  _ps "end if" ; _nl
-	  _ps "if (present(success)) success = lsuccess" ; _nl
-	  _ps "if (.not. lsuccess) return" ; _nl
-	  _ps "lhs = this%$v" ; _nl
+	  _psnl "end if"
+	  _psnl "if (present(success)) success = lsuccess"
+	  _psnl "if (.not. lsuccess) return"
+	  _psnl "lhs = this%$v"
 	  
-	  _ps "end subroutine $sub_name" ; _nl
+	  _psnl "end subroutine $sub_name"
       done
      done
     done
@@ -399,7 +482,7 @@ int=assign_get
 {
     v=$(get_variable_short $typ $prec)$dim
     sub_name=${int}_$(get_variable_short $typ $prec)$dim
-    _ps "subroutine $sub_name(lhs,this,success)" ; _nl
+    _psnl "subroutine $sub_name(lhs,this,success)"
     add_var_declaration -nocheck -$typ -precision $prec \
 	-out -name lhs
     add_var_declaration -type var -in -name this
@@ -407,20 +490,20 @@ int=assign_get
     add_var_declaration -logical -name lsuccess
     add_var_declaration -int -name i
 
-    _ps "lsuccess = this%t=='$v'" ; _nl
-    _ps "if (lsuccess) then" ; _nl
-    _ps "lsuccess = lsuccess .and. size(this%$v,1)<=len(lhs)" ; _nl
-    _ps "end if" ; _nl
+    _psnl "lsuccess = this%t=='$v'"
+    _psnl "if (lsuccess) then"
+    _psnl "lsuccess = lsuccess .and. size(this%$v,1)<=len(lhs)"
+    _psnl "end if"
 
-    _ps "if (present(success)) success = lsuccess" ; _nl
-    _ps "if (.not. lsuccess ) return" ; _nl
+    _psnl "if (present(success)) success = lsuccess"
+    _psnl "if (.not. lsuccess ) return"
 
-    _ps "lhs = ' '" ; _nl
-    _ps "do i = 1 , size(this%$v,1)" ; _nl
-    _ps "lhs(i:i) = this%$v(i)" ; _nl
-    _ps "end do" ; _nl
+    _psnl "lhs = ' '"
+    _psnl "do i = 1 , size(this%$v,1)"
+    _psnl "lhs(i:i) = this%$v(i)"
+    _psnl "end do"
 
-    _ps "end subroutine $sub_name" ; _nl
+    _psnl "end subroutine $sub_name"
 } >> $func_file
 
 
@@ -431,7 +514,7 @@ int=associate_get
       for dim in $(get_dimensions $typ) ; do
 	  v=$(get_variable_short $typ $prec)$dim
 	  sub_name=${int}_$(get_variable_short $typ $prec)$dim
-	  _ps "subroutine $sub_name(lhs,this,dealloc,success)" ; _nl
+	  _psnl "subroutine $sub_name(lhs,this,dealloc,success)"
 	  
 	  add_var_declaration -nocheck -$typ -precision $prec \
 	      -pointer -dimension $dim -name lhs
@@ -441,25 +524,25 @@ int=associate_get
 	  add_var_declaration -logical -name ldealloc
 	  add_var_declaration -logical -name lsuccess
 
-	  _ps "lsuccess = this%t=='$v'" ; _nl
-	  _ps "if (lsuccess) then" ; _nl
+	  _psnl "lsuccess = this%t=='$v'"
+	  _psnl "if (lsuccess) then"
 	  for i in `seq 1 $dim`  ; do
-	      _ps "lsuccess = lsuccess .and. size(this%$v,$i)>size(lhs,$i)" ; _nl
+	      _psnl "lsuccess = lsuccess .and. size(this%$v,$i)>size(lhs,$i)"
 	  done
-	  _ps "end if" ; _nl
+	  _psnl "end if"
 	  
-	  _ps "if (present(success)) success = lsuccess" ; _nl
-	  _ps "if (.not. lsuccess ) return" ; _nl
+	  _psnl "if (present(success)) success = lsuccess"
+	  _psnl "if (.not. lsuccess ) return"
 	  
-	  _ps "ldealloc = .false." ; _nl
-	  _ps "if(present(dealloc))ldealloc = dealloc" ; _nl
-
-	  _ps "if (ldealloc.and.associated(lhs)) then" ; _nl
-	  _ps "deallocate(lhs)" ; _nl
-	  _ps "end if" ; _nl
-	  _ps "lhs => this%$v" ; _nl
+	  _psnl "ldealloc = .false."
+	  _psnl "if(present(dealloc))ldealloc = dealloc"
 	  
-	  _ps "end subroutine $sub_name" ; _nl
+	  _psnl "if (ldealloc.and.associated(lhs)) then"
+	  _psnl "deallocate(lhs)"
+	  _psnl "end if"
+	  _psnl "lhs => this%$v"
+	  
+	  _psnl "end subroutine $sub_name"
       done
      done
     done
@@ -474,7 +557,7 @@ int=associate_get
 {
     v=$(get_variable_short $typ $prec)$dim
     sub_name=${int}_$(get_variable_short $typ $prec)$dim
-    _ps "subroutine $sub_name(lhs,this,dealloc,success)" ; _nl
+    _psnl "subroutine $sub_name(lhs,this,dealloc,success)"
     add_var_declaration -nocheck -$typ "(len=1)" -dimension $dim -precision $prec \
 	-pointer -name lhs
     add_var_declaration -type var -in -name this
@@ -483,23 +566,23 @@ int=associate_get
     add_var_declaration -logical -name ldealloc
     add_var_declaration -logical -name lsuccess
 
-    _ps "lsuccess = this%t=='$v'" ; _nl
-    _ps "if (lsuccess) then" ; _nl
-    _ps "lsuccess = lsuccess .and. size(this%$v,1)>len(lhs)" ; _nl
-    _ps "end if" ; _nl
+    _psnl "lsuccess = this%t=='$v'"
+    _psnl "if (lsuccess) then"
+    _psnl "lsuccess = lsuccess .and. size(this%$v,1)>len(lhs)"
+    _psnl "end if"
 
-    _ps "if (present(success)) success = lsuccess" ; _nl
-    _ps "if (.not. lsuccess ) return" ; _nl
+    _psnl "if (present(success)) success = lsuccess"
+    _psnl "if (.not. lsuccess ) return"
 
-    _ps "ldealloc = .false." ; _nl
-    _ps "if(present(dealloc))ldealloc = dealloc" ; _nl
+    _psnl "ldealloc = .false."
+    _psnl "if(present(dealloc))ldealloc = dealloc"
     
-    _ps "if (ldealloc.and.associated(lhs)) then" ; _nl
-    _ps "deallocate(lhs)" ; _nl
-    _ps "end if" ; _nl
-    _ps "lhs => this%$v" ; _nl
+    _psnl "if (ldealloc.and.associated(lhs)) then"
+    _psnl "deallocate(lhs)"
+    _psnl "end if"
+    _psnl "lhs => this%$v"
     
-    _ps "end subroutine $sub_name" ; _nl
+    _psnl "end subroutine $sub_name"
 } >> $func_file
 
 
@@ -519,12 +602,13 @@ int=delete
 	  else
 	      _ps "else "
 	  fi
-	  _ps "if(this%t=='$v'.and.associated(this%$v))then" ; _nl
-	  _ps "deallocate(this%$v)" ; _nl ; _ps "nullify(this%$v)" ; _nl
+	  _psnl "if(this%t=='$v'.and.associated(this%$v))then"
+	  _psnl "deallocate(this%$v)" 
+	  _psnl "nullify(this%$v)"
       done
      done
     done
-    _ps "end if" ; _nl
+    _psnl "end if"
 } >> $delete_file
 
 # Create the nullify function
@@ -534,11 +618,11 @@ int=nullify
      for prec in $(get_precisions $typ) ; do
       for dim in $(get_dimensions $typ) ; do
 	  v=$(get_variable_short $typ $prec)$dim
-	  _ps "nullify(this%$v)" ; _nl
+	  _psnl "nullify(this%$v)"
       done
      done
     done
-    _ps "this%t='  '" ; _nl
+    _psnl "this%t='  '"
 } >> $nullify_file
 
 
@@ -564,40 +648,40 @@ for op in "==" ">" "<" ">=" "<=" ; do
        v=$(get_variable_short $typ $prec)$dim
        sub_name=${int}_l_$(get_variable_short $typ $prec)$dim
        
-       _ps "function $sub_name(this,rhs) result(ret)" ; _nl
+       _psnl "function $sub_name(this,rhs) result(ret)"
        add_var_declaration -type var -in -name this
        add_var_declaration -nocheck -$typ -precision $prec \
 	   -in -dimension $dim -name rhs
        add_var_declaration -logical -name ret
 
-       _ps "ret = this%t=='$v'" ; _nl
-       _ps "if (.not. ret) return" ; _nl
+       _psnl "ret = this%t=='$v'"
+       _psnl "if (.not. ret) return"
        
        if [ $dim -gt 0 ]; then
-	   _ps "ret = all(this%$v $op rhs)" ; _nl
+	   _psnl "ret = all(this%$v $op rhs)"
        else
-	   _ps "ret = this%$v $op rhs" ; _nl
+	   _psnl "ret = this%$v $op rhs"
        fi
-       _ps "end function $sub_name" ; _nl
+       _psnl "end function $sub_name"
 
        sub_name=${int}_r_$(get_variable_short $typ $prec)$dim
 
-       _ps "function $sub_name(lhs,this) result(ret)" ; _nl
+       _psnl "function $sub_name(lhs,this) result(ret)"
        add_var_declaration -nocheck -$typ -precision $prec \
 	   -in -dimension $dim -name lhs
        add_var_declaration -type var -in -name this
        add_var_declaration -logical -name ret
 
-       _ps "ret = this%t=='$v'" ; _nl
-       _ps "if (.not. ret) return" ; _nl
+       _psnl "ret = this%t=='$v'"
+       _psnl "if (.not. ret) return"
 
        if [ $dim -gt 0 ]; then
-	   _ps "ret = all(lhs $op this%$v)" ; _nl
+	   _psnl "ret = all(lhs $op this%$v)"
        else
-	   _ps "ret = lhs $op this%$v" ; _nl
+	   _psnl "ret = lhs $op this%$v"
        fi
 
-       _ps "end function $sub_name" ; _nl
+       _psnl "end function $sub_name"
 
    done
   done

@@ -7,6 +7,8 @@
 ! Only to be used for not-for-profit development/applications.
 module dictionary
 
+  use variable
+
   implicit none
 
   private
@@ -44,13 +46,11 @@ module dictionary
   public :: dict_copy, dict_print
   
 
-
   ! Internal variables for determining the maximum size of the dictionaries.
   ! We could consider changing this to a variable size string (m_string module)
   ! However, that will increase the dependencies and will most likely not yield
   ! a better interface.
   integer, parameter :: DICT_KEY_LENGTH   = 50
-  integer, parameter :: DICT_VALUE_LENGTH = 250
   
   ! A parameter returned if not found.
   character(len=DICT_VALUE_LENGTH), parameter :: DICT_NOT_FOUND = 'ERROR: key not found'
@@ -61,7 +61,7 @@ module dictionary
   type :: d_entry
      private
      character(len=DICT_KEY_LENGTH)   :: key   = ' '
-     character(len=DICT_VALUE_LENGTH) :: value = ' '
+     type(var) :: value
      integer :: hash = 0
      type(d_entry), pointer :: next => null()
   end type d_entry
@@ -167,7 +167,7 @@ contains
 
   ! Creates a dictionary type from a key and value
   ! Furthermore creates the hash value for speed comparisons...
-  type(dict) function key_value(key,value)
+  type(dict) function key_value_str(key,value)
     character(len=*), intent(in) :: key,value
     allocate(key_value%first)
     if ( len_trim(key) > DICT_KEY_LENGTH ) then
@@ -175,16 +175,30 @@ contains
     else
        key_value%first%key = trim(key)
     end if
-    if ( len_trim(value) > DICT_VALUE_LENGTH ) then
-       key_value%first%value = value(1:DICT_VALUE_LENGTH)
-    else
-       key_value%first%value = trim(value)
-    end if
+    call assign(key_value%first%value,value)
     key_value%first%hash = hash_val(key)
     ! ensure that it is nullified..
     nullify(key_value%first%next)
     key_value%len   =  1
-  end function key_value
+  end function key_value_str
+
+  ! Creates a dictionary type from a key and value
+  ! Furthermore creates the hash value for speed comparisons...
+  type(dict) function key_value_var(key,var)
+    character(len=*), intent(in) :: key,var
+    allocate(key_value%first)
+    if ( len_trim(key) > DICT_KEY_LENGTH ) then
+       key_value%first%key = key(1:DICT_KEY_LENGTH)
+    else
+       key_value%first%key = trim(key)
+    end if
+    key_value%first%value = var
+    key_value%first%hash = hash_val(key)
+    ! ensure that it is nullified..
+    nullify(key_value%first%next)
+    key_value%len   =  1
+  end function key_value_var
+
 
   ! Retrieves the key value in a dictionary type (or a list)
   ! We expect that the key will only be called on single element dictionaries...

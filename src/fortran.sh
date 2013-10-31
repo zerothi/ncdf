@@ -15,12 +15,23 @@ function get_routine_name {
 }
 
 function _ps {
+    local nl=0
+    if [ "x${1:0:3}" == "x-nl" ]; then
+	nl=1
+	[ ${#1} -gt 3 ] && nl=${1:3}
+	shift
+    fi
     printf "%s" "$@"
+    if [ $nl -gt 0 ]; then
+	for i in `seq 1 $nl` ; do
+	    _nl
+	done
+    fi
 }
 
-function _nl {
-    printf '\n'
-}
+function _psnl { _ps -nl "$@" ; }
+
+function _nl { printf '\n' ; }
 
 function get_precisions {
     if [ "$1" == "complex" ]; then
@@ -82,7 +93,6 @@ function var_dimension {
 	done
 	_ps "(${tmp:1})"
     fi
-    _ps ""
 }
 
 function add_var_declaration {
@@ -141,4 +151,3 @@ function add_var_declaration {
     _ps "$t$p$extra :: $n$d"
     [ $newline -eq 1 ] && printf "\n"
 }
-    
