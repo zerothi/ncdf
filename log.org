@@ -9,6 +9,15 @@ Every section in this part lists the change of the versions
 The dictionary will make use of the var format for retaining any type of
 data. This will allow for greater structure etc.
 
+** Rely on libvar.a rather than chars <2013-11-11 Mon>
+The dictionary values are now the type(var) which eases
+the interfacing between different segments of the code.
+We allow to fully utilise the "assign" and "associate"
+function calls in the assignment of the dictionary by following the 
+operators:
+   .KV. (assign)
+   .KPV. (associate)
+
 * Feature
 
 ** <2013-08-29 Thu>

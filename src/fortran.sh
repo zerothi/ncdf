@@ -6,11 +6,11 @@
 # $3 variable precision
 # $4 variable dimension
 function get_routine_name {
-    local name="ncdf"
-    [ ! -z "$1" ] && name="${_ROUTINE_NAME}_$1"
-    [ ! -z "$2" ] && name="${_ROUTINE_NAME}_${2:0:1}"
-    [ ! -z "$3" ] && name="${_ROUTINE_NAME}_$3"
-    [ ! -z "$4" ] && name="${_ROUTINE_NAME}_$4D"
+    local name="$_ROUTINE_NAME"
+    [ ! -z "$1" ] && name="${name}_$1"
+    [ ! -z "$2" ] && name="${name}_${2:0:1}"
+    [ ! -z "$3" ] && name="${name}_$3"
+    [ ! -z "$4" ] && name="${name}_$4D"
     _ps "$name"
 }
 

@@ -165,22 +165,18 @@ contains
     hash_val = 1 + mod(hash_val*HASH_MULT,HASH_SIZE)
   end function hash_val
 
-  ! Creates a dictionary type from a key and value
-  ! Furthermore creates the hash value for speed comparisons...
-  type(dict) function key_value_str(key,value)
-    character(len=*), intent(in) :: key,value
-    allocate(key_value%first)
+  type(dict) pure function new_d_key(key)
+    character(len=*), intent(in) :: key
+    allocate(new_d_key%first)
     if ( len_trim(key) > DICT_KEY_LENGTH ) then
-       key_value%first%key = key(1:DICT_KEY_LENGTH)
+       new_d_key%first%key = key(1:DICT_KEY_LENGTH)
     else
-       key_value%first%key = trim(key)
+       new_d_key%first%key = trim(key)
     end if
-    call assign(key_value%first%value,value)
-    key_value%first%hash = hash_val(key)
-    ! ensure that it is nullified..
-    nullify(key_value%first%next)
-    key_value%len   =  1
-  end function key_value_str
+    new_d_key%first%hash = hash_val(key)
+    new_d_key%len = 1
+    nullify(new_d_key%first%next)
+  end function new_d_key
 
   ! Creates a dictionary type from a key and value
   ! Furthermore creates the hash value for speed comparisons...
@@ -208,7 +204,7 @@ contains
   end function key
 
   ! Retrieves the value value in a dictionary type (or a list)
-  character(len=DICT_VALUE_LENGTH) function value(d)
+  type(var) function value(d)
     type(dict), intent(in) :: d
     value = d%first%value
   end function value
@@ -219,6 +215,31 @@ contains
     hash = d%first%hash
   end function hash
 
+  ! Retrieves the value for a key in a list of dictionaries
+  ! Will use .EQ. to tesh for their equivalence.
+  type(var) function d_value_from_key(d,key)
+    type(dict), intent(in) :: d
+    character(len=*), intent(in) :: key
+    type(dict) :: ld
+    integer :: hash
+    call delete(d_value_from_key)
+    hash = hash_val(key)
+    ld = .first. d
+    search: do
+       if ( .empty. ld ) exit search
+       if (      hash  < .hash. ld ) then
+          exit search
+       else if ( hash  > .hash. ld ) then
+          ! Do nothing... step
+       else if ( hash == .hash. ld ) then
+          if ( key .eq. .KEY. ld ) then
+             d_value_from_key = .VAL. ld
+             return
+          end if
+       end if
+       ld = .next. ld
+    end do search
+  end function d_value_from_key
 
   ! Compares two dict types against each other
   ! Will do comparison, first by hash, and if that matches then
@@ -275,33 +296,6 @@ contains
     integer :: i
     char_nin_d = .not. (char.in.d)
   end function char_nin_d
-
-  ! Retrieves the value for a key in a list of dictionaries
-  ! Will use .EQ. to tesh for their equivalence.
-  character(len=DICT_VALUE_LENGTH) function d_value_from_key(d,key)
-    type(dict), intent(in) :: d
-    character(len=*), intent(in) :: key
-    type(dict) :: ld
-    integer :: hash
-    hash = hash_val(key)
-    ld = .first. d
-    search: do
-       if ( .empty. ld ) exit search
-       if (      hash  < .hash. ld ) then
-          exit search
-       else if ( hash  > .hash. ld ) then
-          ! Do nothing... step
-       else if ( hash == .hash. ld ) then
-          if ( key .eq. .KEY. ld ) then
-             d_value_from_key = .VAL. ld
-             return
-          end if
-       end if
-       ld = .next. ld
-    end do search
-    ! Insert error message here
-    d_value_from_key = DICT_NOT_FOUND
-  end function d_value_from_key
 
   ! Concatenate two dictionaries to one dictionary...
   function d_cat_d(d1,d2)
@@ -426,7 +420,7 @@ contains
     ld = .first. d
     d_loop: do 
        if ( .empty. ld ) exit d_loop
-       write(*,*) trim(.key. ld),' : ',trim(.val. ld)
+       write(*,*) trim(.key. ld) !,' : ',trim(.val. ld)
        ld = .next. ld
     end do d_loop
   end subroutine dict_print

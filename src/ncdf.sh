@@ -115,8 +115,8 @@ function create_put_var {
 		fi
 		echo "     module procedure $current_routine_name" >> $interface_file
 		add_var_declaration -name ncdf --type hNCDF --inout
-		add_var_declaration -name var    --$typ   --in --dimension $dim --precision $prec
-		add_var_declaration -name start  -int --in -opt --dimension 1
+		add_var_declaration -name var  --$typ  --in --dimension $dim --precision $prec
+		add_var_declaration -name start -int   --in --dimension 1 -opt
 		if [ ! -z "$c_head" ]; then
 		    for var in $c_head ; do
 			add_var_declaration -name $var  -int --in -opt --dimension 1
