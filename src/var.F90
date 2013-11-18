@@ -3,6 +3,10 @@
 ! This means
 module variable
 
+  implicit none
+
+  private 
+
   integer, parameter :: is = selected_int_kind(5)
   integer, parameter :: il = selected_int_kind(16)
   integer, parameter :: sp = selected_real_kind(p=6)
@@ -12,8 +16,15 @@ module variable
      character(len=2) :: t = '  '
      include 'var_type.inc'
   end type var
+  public :: var
+
+  public :: size
+  public :: which
+  public :: delete
+  public :: nullify
 
   include 'var_mods.inc'
+  public :: assign, associate
 
 contains
 

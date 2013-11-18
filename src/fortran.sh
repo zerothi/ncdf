@@ -125,7 +125,7 @@ function add_var_declaration {
 		t="character$opt"
 		;;
             -type)            t="type($1)" ; shift ;;
-            -dimension)  [ "$1" != "0" ] && d="$1" ; shift ;;
+            -dimension)  [ "$1" != "0" ] && [ "$1" != "none" ] && d="$1" ; shift ;;
             -size)       [ "$1" != "0" ] && s="$1" ; shift ;;
             -precision)  [ "$1" != "none" ] && p="$1" ; shift ;;
             -opt|-optional)   extra="$extra, optional" ;;
@@ -151,3 +151,38 @@ function add_var_declaration {
     _ps "$t$p$extra :: $n$d"
     [ $newline -eq 1 ] && printf "\n"
 }
+
+function add_var_allocation {
+    local n=""
+    local d=0
+    local s_var=""
+    local dealloc=0
+    while [ $# -gt 0 ]; do
+	# Process what is requested
+	local opt="$1"
+	case $opt in
+	    --*) opt=${opt:1} ;;
+	esac
+	shift
+	case $opt in
+            -name)      n="$1" ; shift ;;
+	    -dimension) d="$1" ; shift ;;
+            -size-of)   s_var="$1" ; shift ;;
+            -deallocate)dealloc=1 ;;
+	esac
+    done
+    [ $d -eq 0 ] && return 0
+    # We do not allocate
+    if [ "$dealloc" -eq 1 ]; then
+	echo "    deallocate($n)"
+	return 0
+    fi
+    [ $d -eq 0 ] && return 0
+    local bound=""
+    for i in `seq 1 $d` ; do
+	bound="$bound,ubound($s_var,$i)"
+    done
+    bound="${bound:1}"
+    echo "    allocate($n($bound))"
+}
+    

@@ -15,3 +15,8 @@ ncdf:
 .PHONY: tests
 tests: ncdf
 	(cd test ; make all)
+
+.PHONY: clean
+clean:
+	(cd src ; make clean)
+	(cd test ; make clean)

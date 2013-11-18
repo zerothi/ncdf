@@ -13,6 +13,12 @@ module dictionary
 
   private
 
+  integer, parameter :: is = selected_int_kind(5)
+  integer, parameter :: il = selected_int_kind(16)
+  integer, parameter :: sp = selected_real_kind(p=6)
+  integer, parameter :: dp = selected_real_kind(p=15)
+
+
   public :: dict
   ! Create a dict type: 'key' .KV. 'val', 'key' .KP. 'pointer'
   public :: operator(.KV.), operator(.KP.)
@@ -53,7 +59,7 @@ module dictionary
   integer, parameter :: DICT_KEY_LENGTH   = 50
   
   ! A parameter returned if not found.
-  character(len=DICT_VALUE_LENGTH), parameter :: DICT_NOT_FOUND = 'ERROR: key not found'
+  character(len=DICT_KEY_LENGTH), parameter :: DICT_NOT_FOUND = 'ERROR: key not found'
   public :: DICT_NOT_FOUND
 
   ! We need to create a linked list to create arbitrarily long dictionaries...
@@ -80,10 +86,7 @@ module dictionary
   integer, parameter :: HASH_MULT = 31
   
   ! Create a dictionary type from 
-  ! char .KV. char
-  interface operator( .KV. )
-     module procedure key_value
-  end interface operator( .KV. )
+  include 'dictionary_interface.inc'
 
   ! Retrieve the value from a dictionary list by specifying the key...
   interface operator( .LU. )
@@ -178,24 +181,6 @@ contains
     nullify(new_d_key%first%next)
   end function new_d_key
 
-  ! Creates a dictionary type from a key and value
-  ! Furthermore creates the hash value for speed comparisons...
-  type(dict) function key_value_var(key,var)
-    character(len=*), intent(in) :: key,var
-    allocate(key_value%first)
-    if ( len_trim(key) > DICT_KEY_LENGTH ) then
-       key_value%first%key = key(1:DICT_KEY_LENGTH)
-    else
-       key_value%first%key = trim(key)
-    end if
-    key_value%first%value = var
-    key_value%first%hash = hash_val(key)
-    ! ensure that it is nullified..
-    nullify(key_value%first%next)
-    key_value%len   =  1
-  end function key_value_var
-
-
   ! Retrieves the key value in a dictionary type (or a list)
   ! We expect that the key will only be called on single element dictionaries...
   character(len=DICT_KEY_LENGTH) function key(d)
@@ -248,8 +233,8 @@ contains
     type(dict), intent(in) :: d1,d2
     d_eq_d = (.hash. d1 == .hash. d2)
     if ( d_eq_d ) then
-       d_eq_d = ( trim(.KEY. d1) .eq. trim(.KEY. d2) ) .and. &
-            ( trim(.VAL. d1) .eq. trim(.VAL. d2) )
+       d_eq_d = ( trim(.KEY. d1) .eq. trim(.KEY. d2) )! .and. &
+       !( trim(.VAL. d1) .eq. trim(.VAL. d2) )
     end if
   end function d_eq_d
 
@@ -424,5 +409,7 @@ contains
        ld = .next. ld
     end do d_loop
   end subroutine dict_print
+
+  include 'dictionary_funcs.inc'
 
 end module dictionary

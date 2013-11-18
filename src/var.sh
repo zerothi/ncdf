@@ -256,13 +256,11 @@ for typ in $types ; do
 done
 
 # ----- create the routine
-_psnl "subroutine assign_var(lhs,rhs,dealloc)"
+sub_name=assign_var
+_psnl "subroutine $sub_name(lhs,rhs,dealloc)"
 # this variable
 add_var_declaration -type var -inout -name lhs
 add_var_declaration -type var -in    -name rhs
-# assignment variable
-add_var_declaration -nocheck -$typ -precision $prec \
-    -dimension $dim -in -name rhs
 add_var_declaration -logical -in -optional -name dealloc
 add_var_declaration -logical -name ldealloc
 # We have two scenarios:
@@ -304,42 +302,30 @@ for typ in $types ; do
   done
 done
 _psnl "end if"
+_psnl "return"
+_psnl "end if"
 
+_psnl "call delete(lhs)"
+_psnl "lhs%t = rhs%t"
+used=0
 for typ in $types ; do
- for prec in $(get_precisions $typ) ; do
-  for dim in $(get_dimensions $typ) ; do
-
-      tmp_func $dim
-      _psnl "this%$v = rhs"
-      _psnl "return"
-      _psnl "end if"
-      # Else the variable should be de-allocated
-      # We only deallocate if the type is not the same
-      _psnl "ldealloc = this%t /= '$v'"
-      if [ $dim -gt 0 ]; then
-	  # We have that * == #
-	  # we will only deallocate if the dimensions does not match
-	  _psnl "if (.not.ldealloc) then"
-	  _ps "ldealloc = "
-	  check_size "this%$v" rhs $dim ; _nl
-	  _psnl "end if"
+  for prec in $(get_precisions $typ) ; do
+    for dim in $(get_dimensions $typ) ; do
+      v=$(get_variable_short $typ $prec)$dim
+      if [ $used -eq 0 ]; then
+	  used=1
+      else
+	  _ps "else "
       fi
-
-      _psnl "if (ldealloc) then"
-      # deallocate
-      _psnl "call delete(this)" # we can safely delete
-      _psnl "this%t = '$v'"
+      _psnl "if(rhs%t=='$v')then"
       tmp_func $dim
-      _psnl "end if"
+      _psnl "lhs%$v = rhs%$v"
       
-      # We know know that we may overwrite the data...
-      _psnl "this%$v = rhs"
-
-      _psnl "end subroutine $sub_name"
+    done
   done
- done
 done
-
+_psnl "end if"
+_psnl "end subroutine $sub_name"
 
 
 # Here we create the function for the assignment overload
@@ -350,53 +336,54 @@ dim=$(get_dimensions $typ)
 int=assign_set
 v=$(get_variable_short $typ $prec)$dim
 sub_name=${int}_$(get_variable_short $typ $prec)$dim
-    _psnl "subroutine $sub_name(this,rhs,dealloc)"
-    
-    add_var_declaration -type var -inout -name this
-    add_var_declaration -nocheck -$typ -precision $prec \
-	-in -name rhs
-    add_var_declaration -logical -in -optional -name dealloc
-    add_var_declaration -logical -name ldealloc
-    add_var_declaration -int -name i
-   
+_psnl "subroutine $sub_name(this,rhs,dealloc)"
+
+add_var_declaration -type var -inout -name this
+add_var_declaration -nocheck -$typ -precision $prec \
+    -in -name rhs
+add_var_declaration -logical -in -optional -name dealloc
+add_var_declaration -logical -name ldealloc
+add_var_declaration -int -name i
+
     # We have two scenarios:
-    _psnl "ldealloc = .true."
-    _psnl "if(present(dealloc))ldealloc = dealloc"
-    
-    _psnl "if (.not. ldealloc) then"
+_psnl "ldealloc = .true."
+_psnl "if(present(dealloc))ldealloc = dealloc"
+
+_psnl "if (.not. ldealloc) then"
     # If the user has requested to not deallocate
     # we assume that the user wishes to retain the address-space
-    _psnl "call nullify(this)"
-    _psnl "this%t = '$v'"
-    _psnl "allocate(this%$v(len_trim(rhs)))"
-    _psnl "do i = 1 , len_trim(rhs)"
-    _psnl "this%$v(i) = rhs(i:i)"
-    _psnl "end do"
-    _psnl "return"
-    _psnl "end if"
+_psnl "call nullify(this)"
+_psnl "this%t = '$v'"
+_psnl "allocate(this%$v(len_trim(rhs)))"
+_psnl "do i = 1 , len_trim(rhs)"
+_psnl "this%$v(i) = rhs(i:i)"
+_psnl "end do"
+_psnl "return"
+_psnl "end if"
     # Else the variable should be de-allocated
     # We only deallocate if the type is not the same
-    _psnl "ldealloc = this%t /= '$v'"
-    if [ $dim -gt 0 ]; then
+_psnl "ldealloc = this%t /= '$v'"
+if [ $dim -gt 0 ]; then
         # We have that * == #
         # we will only deallocate if the dimensions does not match
-	_ps "if (.not.ldealloc) "
-	_ps "ldealloc = len_trim(rhs)/=size(this%$v,1)"
-	_nl
-    fi
+    _ps "if (.not.ldealloc) "
+    _ps "ldealloc = len_trim(rhs)/=size(this%$v,1)"
+    _nl
+fi
 
-    _psnl "if (ldealloc) then"
-    _psnl "call delete(this)"
-    _psnl "this%t = '$v'"
+_psnl "if (ldealloc) then"
+_psnl "call delete(this)"
+_psnl "this%t = '$v'"
     # Add allocation statement
-    _psnl "allocate(this%$v(len_trim(rhs)))"
-    _psnl "end if"
-    
-    _psnl "do i = 1 , len_trim(rhs)"
-    _psnl "this%$v(i) = rhs(i:i)"
-    _psnl "end do"
-    
-    _psnl "end subroutine $sub_name"
+_psnl "allocate(this%$v(len_trim(rhs)))"
+_psnl "end if"
+
+_psnl "do i = 1 , len_trim(rhs)"
+_psnl "this%$v(i) = rhs(i:i)"
+_psnl "end do"
+
+_psnl "end subroutine $sub_name"
+
 } >> $func_file
 
 # Create the set functions

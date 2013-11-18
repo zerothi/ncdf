@@ -42,6 +42,10 @@ prep_ncdf:
 prep_dict:
 	./dictionary.sh
 
+.PHONY: clean
+clean:
+	-rm -f $(NCDF_OBJS) $(VAR_OBJS) $(DICT_OBJS) $(LIBNCDF) $(LIBVAR) $(LIBDICT) $(LIB) *.o *.inc
+
 # Dependencies
 var.o: prep_var
 ncdf.o: prep_ncdf var.o dictionary.o
