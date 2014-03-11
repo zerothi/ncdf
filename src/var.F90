@@ -18,7 +18,7 @@ module variable
   end type var
   public :: var
 
-  public :: size
+!  public :: size
   public :: which
   public :: delete
   public :: nullify

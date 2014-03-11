@@ -621,7 +621,6 @@ int=nullify
 # >= '==' .not. <
 declare -A opName
 opName["=="]=eq
-opName["=="]=eq
 opName[">"]=gt
 opName[">="]=ge
 opName["<"]=lt
@@ -630,6 +629,8 @@ for op in "==" ">" "<" ">=" "<=" ; do
 {
  int=${opName[$op]}
  for typ in ${types//complex/} ; do
+  [ "$int" != "eq" ] && [ "$typ" = "logical" ] && continue
+  [ "$int" = "eq" ] && [ "$typ" = "logical" ] && op=".eqv." && int=eqv
   for prec in $(get_precisions $typ) ; do
    for dim in $(get_dimensions $typ) ; do
        v=$(get_variable_short $typ $prec)$dim

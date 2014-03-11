@@ -275,7 +275,7 @@ contains
     end if
 #endif
 
-  end subroutine ncdf_parallel_init
+  end subroutine ncdf_init
 
   subroutine ncdf_create(ncdf,filename,mode,overwrite,parallel,comm)
 #ifdef NCDF_PCDF
