@@ -1,0 +1,3 @@
+[submodule "lib/fvar"]
+	path = lib/fvar
+	url = git@github.com:zerothi/fvar.git
