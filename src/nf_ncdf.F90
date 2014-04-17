@@ -72,7 +72,7 @@
 ! The idea is that this module should be able to do parallel IO when needed
 ! Currently it does not have this implemented, but it provides a wrapper basis
 ! which makes it easy.
-module ncdf
+module nf_ncdf
 
   ! Globalize the variables needed for generating the requested features
   use netcdf
@@ -1118,5 +1118,5 @@ contains
 #endif
   end subroutine ncdf_die
 
-end module ncdf
+end module nf_ncdf
 

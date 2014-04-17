@@ -5,7 +5,7 @@ include ../arch.make
 default: lib
 
 # The different libraries
-OBJS = ncdf.o
+OBJS = nf_ncdf.o
 
 INC += -I../lib/fvar
 
@@ -30,8 +30,8 @@ s/[[:space:]]*\#\([^i][^[:space:]]*\)/"\1"/g;\
 s/"endif"/\n\#endif/g'
 prep:
 	./ncdf.sh
-	$(PP) ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
-	$(PP) tmp.F90 | sed -e $(SED_DEL) > ncdf.f90 #2> /dev/null
+	$(PP) nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
 
 .PHONY: clean
 clean:
@@ -39,5 +39,5 @@ clean:
 	-rm -f ncdf_interface.inc ncdf_funcs.inc
 
 # Dependencies
-ncdf.o: | prep
-ncdf.o: $(LIBVARDICT)
+nf_ncdf.o: | prep
+nf_ncdf.o: $(LIBVARDICT)
