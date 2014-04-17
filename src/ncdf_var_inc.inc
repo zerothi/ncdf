@@ -1,5 +1,12 @@
 #include "settings.inc"
+#if DIM > 0
+#define __NC_COUNT ,count=count
+subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start,count)
+  integer, intent(in), optional :: count(:)
+#else
+#define __NC_COUNT  
 subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start)
+#endif
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
   VAR_TYPE, intent(in)DIMS :: var
@@ -14,16 +21,16 @@ subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start)
   ALLOC(r,var)
   r = real(var)
   call ncdf_inq_var(this,'Re'//name,id=id)
-  call ncdf_err(nf90_put_var(this%id, id, r,start=start), &
+  call ncdf_err(nf90_put_var(this%id, id, r,start=start __NC_COUNT), &
        'Saving variable (VAR) Re'//trim(name)//' in file: '//this)
   call ncdf_inq_var(this,'Im'//name,id=id)
   r = aimag(var)
-  call ncdf_err(nf90_put_var(this%id, id, r,start=start), &
+  call ncdf_err(nf90_put_var(this%id, id, r,start=start __NC_COUNT), &
        'Saving variable (VAR) Im'//trim(name)//' in file: '//this)
   deallocate(r)
 #else
   call ncdf_inq_var(this,name,id=id)
-  call ncdf_err(nf90_put_var(this%id, id, var,start=start), &
+  call ncdf_err(nf90_put_var(this%id, id, var,start=start __NC_COUNT), &
        'Saving variable (VAR) '//trim(name)//' in file: '//this)
 #endif
 end subroutine ROUTINE3(put_var,VAR,name)

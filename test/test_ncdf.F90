@@ -1,7 +1,8 @@
 program test_ncdf
-  use m_ncdf
+  use dictionary
+  use nf_ncdf
   use iso_c_binding
-#ifdef PCDF
+#ifdef NCDF_PARALLEL
   use mpi
 #endif
 
@@ -19,7 +20,8 @@ program test_ncdf
   type(hNCDF) :: ncdf
   integer :: Node, Nodes, i
   character(len=1) :: ci
-#ifdef PCDF
+  type(dict) :: dic
+#ifdef NCDF_PARALLEL
   integer :: MPIerror
 
   call MPI_Init(MPIerror)
@@ -70,7 +72,9 @@ contains
 
   subroutine goto_dir(a)
     character(len=*), intent(in) :: a
-    call system('mkdir -p '//a)
+    if ( Node == 0 ) then
+       call system('mkdir -p '//a)
+    end if
     call chdir(a) 
   end subroutine goto_dir
 
@@ -94,8 +98,9 @@ contains
     call ncdf_create(ncdf,'NCDF3_seq.nc',mode=NF90_64BIT_OFFSET,overwrite=.true.)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
-    call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'What is this'))
+    dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
+    call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/))!, atts=dic)
+    call delete(dic)
     call ncdf_print(ncdf)
     do i = 1 , 10
        call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
@@ -103,18 +108,20 @@ contains
     ! redefining a NetCDF file after already ending the definition step is ONLY 
     ! allowed in NetCDF 3 formats...
     call ncdf_def_dim(ncdf,'z',2)
+    dic = ('unit'.kv.'m')//('Name'.kv.'Height')
+    dic = dic//('ATT_DELETE'.kv.1)
     call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'Height'))
+         atts=('unit'.kv.'m')//('Name'.kv.'Height')//('ATT_DELETE'.kv.1))
     do i = 1 , 10
        call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
     end do
     call ncdf_close(ncdf)
-    !call check_nc(''//ncdf)
+    call check_nc(''//ncdf)
   end subroutine test_seq3
 
   subroutine test_seq4()
     type(hNCDF):: grp1,grp2
-#ifdef CDF4
+#ifdef NCDF_4
     call show_where('In ncdf4 Sequential')
     call ncdf_create(ncdf,'NCDF4_seq.nc',mode=NF90_NETCDF4,overwrite=.true.)
     call ncdf_def_dim(ncdf,'x',1)
@@ -149,7 +156,7 @@ contains
   end subroutine test_seq4
 
   subroutine test_par3()
-#ifdef PCDF
+#ifdef NCDF_PARALLEL3
     call show_where('In ncdf3 parallel')
     call ncdf_create(ncdf,'NCDF3_par.nc',mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET),overwrite=.true.,comm=MPI_Comm_world)
     call ncdf_def_dim(ncdf,'x',1)
@@ -178,21 +185,25 @@ contains
   end subroutine test_par3
 
   subroutine test_par4()
-    use netcdf
-#ifdef PCDF
+#ifdef NCDF_PARALLEL
     call show_where('In ncdf4 parallel')
     call ncdf_create(ncdf,'NCDF4_par.nc',mode=NF90_MPIIO,overwrite=.true.,comm=MPI_Comm_World)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
     call ncdf_def_dim(ncdf,'z',2)
+    dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
     call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'What is this'))!,compress_lvl=3)
+         atts=dic)!,compress_lvl=3)
+    call delete(dic)
+    dic = 'unit'.kv.'m'
+    dic = dic//('Name'.kv.'Height')
     call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=('unit'.kv.'m')//('Name'.kv.'Height'))!,compress_lvl=3)
-!    call ncdf_print(ncdf)
+         atts=dic)!,compress_lvl=3)
+    call delete(dic)
+    call ncdf_print(ncdf)
     do i = 1 , 9
        if ( mod(i,Nodes) == Node ) then
-          call ncdf_put_var(ncdf,'v',(/real(i,8)/),start=(/1,i/),count=(/1/))
+          call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
        end if
     end do
     do i = 1 , 9

@@ -553,7 +553,7 @@ contains
     integer,          intent(in)    :: type
     character(len=*), intent(in)    :: dims(:)
     integer,          intent(out)   :: id
-    type(dict),       intent(inout), optional :: atts
+    type(dict),                      optional :: atts
     integer,          intent(in),    optional :: compress_lvl
     type(dict) :: att
     type(var)  :: at_var
@@ -590,10 +590,16 @@ contains
        att_loop: do 
           if ( .empty. att ) exit att_loop
           key = .key. att
-          if ( key == "ATT_DELETE" ) cycle
+          if ( key == "ATT_DELETE" ) then
+             att = .next. att
+             cycle
+          end if
           call associate(at_var,att)
           ! currently we only allow the string to be performed
-          if ( at_var%t /= "V0" ) cycle
+          if ( at_var%t /= "V0" ) then
+             att = .next. att
+             cycle
+          end if
           tmp = at_var%v0
              
           iret = nf90_put_att(this%id, id, trim(key), tmp)
@@ -620,8 +626,8 @@ contains
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
     integer, intent(in) :: type
-    character(len=*), intent(inout), optional :: dims(:)
-    type(dict), intent(inout), optional :: atts
+    character(len=*), intent(in) :: dims(:)
+    type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: fill
     integer :: id
@@ -647,8 +653,8 @@ contains
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
     logical, intent(in) :: type
-    character(len=*), intent(in), optional :: dims(:)
-    type(dict), intent(inout), optional :: atts
+    character(len=*), intent(in) :: dims(:)
+    type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: fill
     integer :: id
