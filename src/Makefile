@@ -1,52 +1,43 @@
+.SUFFIXES: .f90 .o .a
 include ../arch.make
 
 .PHONY: default
-default: libs
+default: lib
 
 # The different libraries
-NCDF_OBJS = ncdf.o
-VAR_OBJS  = var.o
-DICT_OBJS = dictionary.o
+OBJS = ncdf.o
 
-LIBNCDF = libncdf.a
-LIBVAR  = libvar.a
-LIBDICT = libdictionary.a
-LIB     = libnpa.a
+INC += -I../lib/fvar
 
-.PHONY: libs
-libs: $(LIBVAR) $(LIBDICT) $(LIBNCDF)
-	$(AR) $(ARFLAGS) $(LIB) $(LIBVAR) $(LIBDICT) $(LIBNCDF)
+LIB = libncdf.a
+LIBVARDICT  = ../lib/fvar/libvardict.a
+
+.PHONY: lib
+lib: $(LIBVARDICT) $(LIB)
+
+$(LIB): $(LIBVARDICT) $(OBJS)
+	$(AR) $(ARFLAGS) $(LIB) $(LIBVARDICT) $(OBJS)
 	$(RANLIB) $(LIB)
-	
-$(LIBNCDF): $(LIBVAR) $(LIBDICT) $(NCDF_OBJS)
-	$(AR) $(ARFLAGS) $(LIBNCDF) $(LIBVAR) $(LIBDICT) $(NCDF_OBJS)
-	$(RANLIB) $(LIBNCDF)
 
-$(LIBDICT): $(LIBVAR) $(DICT_OBJS)
-	$(AR) $(ARFLAGS) $(LIBDICT) $(LIBVAR) $(DICT_OBJS)
-	$(RANLIB) $(LIBDICT)
+$(LIBVARDICT):
+	@echo "*** Ensure succesful compilation of $(LIBVARDICT) ***"
+	exit 1
 
-$(LIBVAR): $(VAR_OBJS)
-	$(AR) $(ARFLAGS) $(LIBVAR) $(VAR_OBJS)
-	$(RANLIB) $(LIBVAR)
-
-.PHONY: prep_var
-prep_var:
-	./var.sh
-
-.PHONY: prep_ncdf
-prep_ncdf:
+.PHONY: prep
+SED_DEL = 's/NEWLINE/\n/g;/^$$/d;/^\!.*&/d;\
+s/[[:space:]]*\#\#[[:space:]]*\([^[:space:]]*\)/\1/g;\
+s/[[:space:]]*\#\([^i][^[:space:]]*\)/"\1"/g;\
+s/"endif"/\n\#endif/g'
+prep:
 	./ncdf.sh
-
-.PHONY: prep_dict
-prep_dict:
-	./dictionary.sh
+	$(PP) ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) tmp.F90 | sed -e $(SED_DEL) > ncdf.f90 #2> /dev/null
 
 .PHONY: clean
 clean:
-	-rm -f $(NCDF_OBJS) $(VAR_OBJS) $(DICT_OBJS) $(LIBNCDF) $(LIBVAR) $(LIBDICT) $(LIB) *.o *.inc
+	-rm -f $(OBJS) $(LIB) $(LIBVARDICT) *.o *.mod
+	-rm -f ncdf_interface.inc ncdf_funcs.inc
 
 # Dependencies
-var.o: prep_var
-ncdf.o: prep_ncdf var.o dictionary.o
-dictionary.o: prep_dict var.o
+ncdf.o: | prep
+ncdf.o: $(LIBVARDICT)

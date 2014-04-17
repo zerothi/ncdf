@@ -10,7 +10,8 @@ all: ncdf
 
 .PHONY: ncdf
 ncdf:
-	(cd src ; make libs)
+	(cd lib/fvar ; make lib)
+	(cd src ; make lib)
 
 .PHONY: tests
 tests: ncdf
@@ -18,5 +19,6 @@ tests: ncdf
 
 .PHONY: clean
 clean:
+	(cd lib/fvar ; make clean)
 	(cd src ; make clean)
 	(cd test ; make clean)
