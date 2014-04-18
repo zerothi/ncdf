@@ -1,4 +1,7 @@
-#include "../lib/fvar/settings.inc"
+#define _cc2_1(x,y) _cc2_2(x,y)
+#define _cc2_2(x,y) x ## y
+#define _cc3_1(x,y,z) _cc3_2(x,y,z)
+#define _cc3_2(x,y,z) x ## y ## z
 #define _cc4_1(w,x,y,z) _cc4_2(w,x,y,z)
 #define _cc4_2(w,x,y,z) w ## x ## y ## z
 #define _cc5_1(v,w,x,y,z) _cc5_2(v,w,x,y,z)
@@ -6,6 +9,9 @@
 
 #define ROUTINE2(base,var) _cc3_1(base,_,var)
 #define ROUTINE3(base,var,n) _cc5_1(base,_,var,_,n)
+
+#define _str1(x) _str2(x)
+#define _str2(x) #x
 #define STR(x) _str1(x)
 #define THIS(x) _cc3_1(this,%,x)
 

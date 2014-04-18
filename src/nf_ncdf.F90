@@ -168,7 +168,7 @@ contains
     copy = ncdf
   end subroutine ncdf_copy
 
-  subroutine ncdf_init(ncdf,name,mode,parallel,comm)
+  subroutine ncdf_init(ncdf,name,mode,parallel,comm,overwrite)
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
@@ -177,6 +177,7 @@ contains
     integer, optional, intent(in)     :: mode
     logical, optional, intent(in)     :: parallel
     integer, optional, intent(in)     :: comm
+    logical, optional, intent(in)     :: overwrite
     integer :: format
     logical :: exist
 #ifdef NCDF_PARALLEL
@@ -190,6 +191,13 @@ contains
     ncdf%name     = " "
     if ( present(name) ) ncdf%name = name
     ncdf%grp      = " "
+
+    if ( .not. present(mode) ) then
+       ! Our default is the 64 bit offset files... 
+       ! The best backwards compatibility format
+       ncdf%mode = IOR(ncdf%mode,NF90_64BIT_OFFSET)
+    end if
+
 
     ! If the parallel interface is not applied we need the communicator 
     ! to be negative
@@ -240,6 +248,9 @@ contains
 #ifdef NCDF_PARALLEL
     ! We need only do this if the file exists
     inquire(file=""//ncdf,exist=exist)
+    if ( present(overwrite) .and. exist ) then
+       exist = .not. overwrite
+    end if
     if ( ncdf%parallel .and. exist ) then
        ! In case the implementation does not allow PCDF
        ! The = 0 is the standard with no parallel enabled...
@@ -274,15 +285,15 @@ contains
 #endif
 
     if ( present(mode) ) then
-       ncdf%mode = ior(ncdf%mode,mode)
+       ncdf%mode = IOR(ncdf%mode,mode)
     end if
 
 #ifdef NCDF_PARALLEL
     ! If the user has forgotton the correct notation of the file format
     if ( iand(NF90_MPIIO,ncdf%mode) == NF90_MPIIO ) then
-       ncdf%mode = ior(ncdf%mode,NF90_NETCDF4)
+       ncdf%mode = IOR(ncdf%mode,NF90_NETCDF4)
     else if ( iand(NF90_MPIPOSIX,ncdf%mode) == NF90_MPIPOSIX ) then
-       ncdf%mode = ior(ncdf%mode,NF90_NETCDF4)
+       ncdf%mode = IOR(ncdf%mode,NF90_NETCDF4)
        if ( iand(NF90_64BIT_OFFSET,ncdf%mode) == NF90_64BIT_OFFSET ) &
             call ncdf_die("You have requested netCDF4 parallel "//&
             "IO together with a netCDF3 file.")
@@ -308,7 +319,9 @@ contains
     integer :: file_format
     logical :: exist
 
-    call ncdf_init(ncdf,name=filename,mode=mode,parallel=parallel,comm=comm)
+    call ncdf_init(ncdf,name=filename, &
+         mode=mode,parallel=parallel,comm=comm, &
+         overwrite=overwrite)
 
     ! We need to correct the definition for netCDF-3 files
     inquire(file=ncdf%name,exist=exist)
@@ -326,17 +339,13 @@ contains
        end if
     end if
 
-    if ( .not. present(mode) ) then
-       ! Our default is the 64 bit offset files... The best backwards compatibility
-       ncdf%mode = IOR(ncdf%mode,NF90_64BIT_OFFSET)
-    end if
-
-
     if ( ncdf%parallel .and. ncdf%comm >= 0 ) then
 #ifdef NCDF_PARALLEL
        call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id, &
             comm = ncdf%comm, info=MPI_INFO_NULL), &
             "Creating file: "//ncdf//" with communicator")
+#else
+       call ncdf_err(-100,"Not compiled with communicater parallel")
 #endif
     else if ( ncdf%parallel ) then
        call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id), &
@@ -345,7 +354,6 @@ contains
        call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id), &
             "Creating file: "//ncdf)
     end if
-    
     ! We could check for mode == NF90_SHARE in case of parallel...
     ! However, it does not make sense as the other is still correct, just slow
 
@@ -353,7 +361,8 @@ contains
     ! modes
     call ncdf_inq(ncdf, format=file_format)
     select case ( file_format ) 
-    case ( NF90_FORMAT_NETCDF4, NF90_FORMAT_NETCDF4_CLASSIC )
+    case ( NF90_FORMAT_NETCDF4 )
+       ! NetCDF4-classic still uses define/undefine
        ncdf%define = -1
     end select
 
@@ -395,6 +404,8 @@ contains
        call ncdf_err(nf90_open(filename, ncdf%mode , ncdf%id, &
             comm = ncdf%comm, info=MPI_INFO_NULL), &
                "Opening file: "//ncdf//" with communicator")
+#else
+       call ncdf_err(-100,"Code not compiled with NCDF_PARALLEL")
 #endif
     else if ( ncdf%parallel ) then
        call ncdf_err(nf90_open(filename, ncdf%mode , ncdf%id), &
@@ -406,11 +417,27 @@ contains
     
     call ncdf_inq(ncdf, format=file_format)
     select case ( file_format ) 
-    case ( NF90_FORMAT_NETCDF4, NF90_FORMAT_NETCDF4_CLASSIC )
+    case ( NF90_FORMAT_NETCDF4 )
        ncdf%define = -1
     end select
 
   end subroutine ncdf_open
+
+  subroutine ncdf_var_par_access(this,name,access)
+    type(hNCDF), intent(inout) :: this
+    character(len=*), intent(in) :: name
+    integer, intent(in) :: access
+#ifdef NCDF_PARALLEL
+    integer :: id
+    
+    if ( .not. ncdf_participate(this) ) return
+    
+    call ncdf_inq_var(this,name,id=id)
+
+    call ncdf_err(nf90_var_par_access(this%id, id, access), &
+         'Changing par-access (VAR) '//trim(name)//' in file: '//this)
+#endif
+  end subroutine ncdf_var_par_access
 
   subroutine ncdf_close(ncdf)
     type(hNCDF), intent(inout) :: ncdf
@@ -421,11 +448,12 @@ contains
 
   end subroutine ncdf_close
 
-  subroutine ncdf_inq_ncdf(ncdf,dims,vars,atts,format,exist)
+  subroutine ncdf_inq_ncdf(ncdf,dims,vars,atts,format,grps,exist)
     type(hNCDF), intent(in) :: ncdf
-    integer, optional, intent(out) :: dims, vars, atts, format
+    integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
-    integer :: ldims, lvars, latts, lformat
+    integer :: ldims, lvars, latts, lformat, lgrps
+    integer :: grp_id(1000)
     
     if ( .not. ncdf_participate(ncdf) ) return
 
@@ -449,11 +477,24 @@ contains
     if ( present(atts) )   atts   = latts
     if ( present(format) ) format = lformat
 
+    if ( present(grps) ) then
+       if ( IAND(ncdf%mode,NF90_NETCDF4) == NF90_NETCDF4 ) then
+          call ncdf_err(nf90_inq_grps(ncdf%id,grps,grp_id), &
+               "Inquiring file information "//ncdf)
+          if ( grps > 1000 ) then
+             call ncdf_err(-100,&
+                  'Number of groups exceeded 1000, not allowed.')
+          end if
+       else
+          grps = -1
+       end if
+    end if
+    
   end subroutine ncdf_inq_ncdf
 
-  subroutine ncdf_inq_name(name,dims,vars,atts,format,exist)
+  subroutine ncdf_inq_name(name,dims,vars,atts,format,grps,exist)
     character(len=*), intent(in)   :: name
-    integer, optional, intent(out) :: dims, vars, atts, format
+    integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
     type(hNCDF) :: ncdf
 
@@ -468,7 +509,8 @@ contains
     ! Open the file...
     call ncdf_open(ncdf,name,parallel=.false.)
     ! Do the inquiry...
-    call ncdf_inq_ncdf(ncdf,dims=dims,vars=vars,atts=atts,format=format)
+    call ncdf_inq_ncdf(ncdf,dims=dims,vars=vars,atts=atts,grps=grps,&
+         format=format)
     ! Close the file
     call ncdf_close(ncdf)
 
@@ -491,6 +533,24 @@ contains
          "Defining dimension: "//trim(name)//" in file: "//ncdf)
 
   end subroutine ncdf_def_dim
+
+! Simplify the renaming of any dimension
+  subroutine ncdf_rename_var(ncdf,old_name,new_name)
+    type(hNCDF),     intent(inout) :: ncdf
+    character(len=*), intent(in)   :: old_name, new_name
+    integer :: id
+
+    if ( .not. ncdf_participate(ncdf) ) return
+
+    call ncdf_redef(ncdf)
+
+    call ncdf_inq_var(ncdf,old_name,id=id)
+
+    call ncdf_err(nf90_rename_var(ncdf%id, id, new_name),&
+         "Renaming variable: "//trim(old_name)//" to "//&
+         trim(new_name)//" in file: "//ncdf)
+    
+  end subroutine ncdf_rename_var
 
 ! Simplify the renaming of any dimension
   subroutine ncdf_rename_dim(ncdf,old_name,new_name)
@@ -544,7 +604,8 @@ contains
 ! Simplify the addition of a variable...
 ! This routine *MUST* be called after ncdf_participate 
 ! (however, as it is a local routine the burden is ours, not the programmers) 
-  subroutine ncdf_def_var_generic(this,name,type,dims,id,atts,compress_lvl)
+  subroutine ncdf_def_var_generic(this,name,type,dims,id,atts,compress_lvl, &
+       access)
     use iso_var_str
     use variable
     use dictionary
@@ -555,6 +616,7 @@ contains
     integer,          intent(out)   :: id
     type(dict),                      optional :: atts
     integer,          intent(in),    optional :: compress_lvl
+    integer,          intent(in),    optional :: access
     type(dict) :: att
     type(var)  :: at_var
 #ifdef NCDF_4
@@ -617,11 +679,16 @@ contains
        end if
        
     end if
+
+    if ( present(access) ) then
+       call ncdf_var_par_access(this,name,access)
+    end if
     
   end subroutine ncdf_def_var_generic
 
   subroutine ncdf_def_var_integer(this, name, type, dims, &
-       atts, compress_lvl, fill)
+       atts, compress_lvl, fill, &
+       access)
     use dictionary
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
@@ -630,11 +697,14 @@ contains
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: fill
+    integer, intent(in), optional :: access
     integer :: id
 
     if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_def_var_generic(this, name, type, dims, id, atts=atts, compress_lvl=compress_lvl)
+    call ncdf_def_var_generic(this, name, type, dims, id, &
+         atts=atts, compress_lvl=compress_lvl, &
+         access=access)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -648,7 +718,8 @@ contains
   end subroutine ncdf_def_var_integer
 
   subroutine ncdf_def_var_logical(this, name, type, dims, &
-       atts, compress_lvl, fill)
+       atts, compress_lvl, fill, &
+       access)
     use dictionary
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
@@ -657,6 +728,7 @@ contains
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: fill
+    integer, intent(in), optional :: access
     integer :: id
     integer :: ltype
 
@@ -675,7 +747,8 @@ contains
     end if
 
     call ncdf_def_var_generic(this, "Re"//trim(name), ltype, dims, id, &
-         atts=atts, compress_lvl=compress_lvl)
+         atts=atts, compress_lvl=compress_lvl, &
+         access=access)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -686,7 +759,8 @@ contains
        end if
     end if
     call ncdf_def_var_generic(this, "Im"//trim(name), ltype, dims, id, &
-         atts=atts, compress_lvl=compress_lvl)
+         atts=atts, compress_lvl=compress_lvl, &
+         access=access)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -955,6 +1029,8 @@ contains
        write(0,"(a)") "Error occured in NCDF:"
        write(*,"(a)") trim(nf90_strerror(status))
        write(0,"(a)") trim(nf90_strerror(status))
+       write(*,"(a,tr1,i0)") "Status number:",status
+       write(0,"(a,tr1,i0)") "Status number:",status
        call ncdf_die("NetCDF Error: Stopped due to error in NetCDF file")
     endif
   end subroutine ncdf_err
@@ -1026,7 +1102,7 @@ contains
     use mpi
 #endif
     type(hNCDF), intent(in) :: ncdf
-    integer :: ndims,nvars,ngatts,file_format
+    integer :: ndims,nvars,ngatts,file_format,ngrps
     integer :: Node,Nodes
 #ifdef NCDF_PARALLEL
     integer :: MPIerror
@@ -1052,7 +1128,7 @@ contains
        write(*,"(a20,i7)") "NetCDF ID:          ",ncdf%id
        if ( ncdf%parallel ) then
           write(*,"(a20,a)") "Parallel access:    ","True"
-          write(*,"(a20,i0)") "Parallel processors:",Nodes
+          write(*,"(a20,tr1,i0)") "Parallel processors:",Nodes
        else
           write(*,"(a20,a)") "Parallel access:    ","False"
        end if
@@ -1061,7 +1137,8 @@ contains
        else if ( ncdf%define == 1 ) then
           write(*,"(a20,a)") "In define-mode:     ","False"
        end if
-       call ncdf_inq(ncdf, dims=ndims, vars=nvars, atts=ngatts, format=file_format)
+       call ncdf_inq(ncdf, dims=ndims, vars=nvars, atts=ngatts, &
+            grps=ngrps, format=file_format)
        select case ( file_format ) 
        case ( NF90_FORMAT_CLASSIC )
           write(*,"(a20,a)") "File format:        ","Classic"
@@ -1077,6 +1154,9 @@ contains
        write(*,"(a20,i7)") "Number of dimensions:  ",ndims
        write(*,"(a20,i7)") "Number of variables:   ",nvars
        write(*,"(a20,i7)") "Number of attributes:  ",ngatts
+       if ( ngrps >= 0 ) then
+       write(*,"(a20,i7)") "Number of groups:      ",ngrps
+       end if
        if ( iand(NF90_WRITE,ncdf%mode) == NF90_WRITE ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_WRITE"
        if ( iand(NF90_NOCLOBBER,ncdf%mode) == NF90_NOCLOBBER ) &
@@ -1091,6 +1171,8 @@ contains
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_SHARE"
        if ( iand(NF90_NETCDF4,ncdf%mode) == NF90_NETCDF4 ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_NETCDF4"
+       if ( iand(NF90_CLASSIC_MODEL,ncdf%mode) == NF90_CLASSIC_MODEL ) &
+            write(*,"(a20,a)") "NetCDF mode:        ","NF90_CLASSIC_MODEL"
 #ifdef NCDF_PARALLEL
        if ( iand(NF90_MPIIO,ncdf%mode) == NF90_MPIIO ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_MPIIO"

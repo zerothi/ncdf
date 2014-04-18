@@ -46,6 +46,8 @@ program test_ncdf
   write(*,*)
   call test_par4()
   write(*,*)
+  call test_par4_ind()
+  write(*,*)
   call chdir('..')
 
   write(ci,'(i1)') mod(Node,2)
@@ -55,9 +57,10 @@ program test_ncdf
   call test_seq4()
   call test_par3()
   call test_par4()
+  call test_par4_ind()
   call chdir('..')
 
-#ifdef MPI
+#ifdef NCDF_PARALLEL
   call MPI_Finalize(MPIerror)
 #endif
 
@@ -81,8 +84,9 @@ contains
   subroutine check_nc(file)
     character(len=*), intent(in) :: file
     logical :: exist
+    return
     inquire(file=file,exist=exist)
-#ifdef MPI
+#ifdef NCDF_PARALLEL
     call MPI_barrier(MPI_COMM_world,MPIerror)
 #endif
     if ( exist ) then
@@ -187,20 +191,22 @@ contains
   subroutine test_par4()
 #ifdef NCDF_PARALLEL
     call show_where('In ncdf4 parallel')
-    call ncdf_create(ncdf,'NCDF4_par.nc',mode=NF90_MPIIO,overwrite=.true.,comm=MPI_Comm_World)
+    call ncdf_create(ncdf,'NCDF4_par.nc', &
+         mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL),overwrite=.true.,comm=MPI_Comm_World)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
     call ncdf_def_dim(ncdf,'z',2)
     dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
     call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=dic)!,compress_lvl=3)
+         atts=dic,access=NF90_COLLECTIVE)!,compress_lvl=3)
     call delete(dic)
     dic = 'unit'.kv.'m'
     dic = dic//('Name'.kv.'Height')
     call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=dic)!,compress_lvl=3)
+         atts=dic,access=NF90_COLLECTIVE)!,compress_lvl=3)
     call delete(dic)
     call ncdf_print(ncdf)
+    
     do i = 1 , 9
        if ( mod(i,Nodes) == Node ) then
           call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
@@ -215,6 +221,40 @@ contains
     call check_nc(''//ncdf)
 #endif
   end subroutine test_par4
+
+  subroutine test_par4_ind()
+#ifdef NCDF_PARALLEL
+    call show_where('In ncdf4 parallel')
+    call ncdf_create(ncdf,'NCDF4_par.nc', &
+         mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL),overwrite=.true.,comm=MPI_Comm_World)
+    call ncdf_def_dim(ncdf,'x',1)
+    call ncdf_def_dim(ncdf,'y',9)
+    call ncdf_def_dim(ncdf,'z',2)
+    dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
+    call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
+         atts=dic)!,compress_lvl=3)
+    call delete(dic)
+    dic = 'unit'.kv.'m'
+    dic = dic//('Name'.kv.'Height')
+    call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
+         atts=dic)!,compress_lvl=3)
+    call delete(dic)
+    call ncdf_print(ncdf)
+    
+    do i = 1 , 9
+       if ( mod(i,Nodes) == Node ) then
+          call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
+       end if
+    end do
+    do i = 1 , 9
+       if ( mod(i,Nodes) == Node ) then
+          call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/),count=(/2/))
+       end if
+    end do
+    call ncdf_close(ncdf)
+    call check_nc(''//ncdf)
+#endif
+  end subroutine test_par4_ind
 
 end program test_ncdf
 

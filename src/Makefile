@@ -4,6 +4,8 @@ include ../arch.make
 .PHONY: default
 default: lib
 
+# Add user preprocessor flags
+PP += $(FPPFLAGS)
 # The different libraries
 OBJS = nf_ncdf.o
 

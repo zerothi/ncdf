@@ -22,7 +22,7 @@ subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start)
   r = real(var)
   call ncdf_inq_var(this,'Re'//name,id=id)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start __NC_COUNT), &
-       'Saving variable (VAR) Re'//trim(name)//' in file: '//this)
+     "Saving variable (VAR) Re"//trim(name)//' in file: '//this)
   call ncdf_inq_var(this,'Im'//name,id=id)
   r = aimag(var)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start __NC_COUNT), &
@@ -58,10 +58,10 @@ subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
   ALLOC(i,var)
   call ncdf_inq_var(this,'Re'//name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, r,start=start,count=count,stride=stride), &
-       'Saving variable (VAR) Re'//trim(name)//' in file: '//this)
+       'Retrieving variable (VAR) Re'//trim(name)//' in file: '//this)
   call ncdf_inq_var(this,'Im'//name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, i,start=start,count=count,stride=stride), &
-       'Saving variable (VAR) Im'//trim(name)//' in file: '//this)
+       'Retrieving variable (VAR) Im'//trim(name)//' in file: '//this)
   var = cmplx(r,i)
   deallocate(r,i)
 #else
