@@ -116,6 +116,8 @@ module nf_ncdf
      character(len=NF90_MAX_NAME) :: grp
      ! The communicator describing the parallel activity
      integer            :: comm 
+     ! Default compression level
+     integer            :: comp_lvl
   end type hNCDF
 
   ! Interface the concatenation
@@ -168,7 +170,7 @@ contains
     copy = ncdf
   end subroutine ncdf_copy
 
-  subroutine ncdf_init(ncdf,name,mode,parallel,comm,overwrite)
+  subroutine ncdf_init(ncdf,name,mode,parallel,comm,overwrite,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
@@ -178,6 +180,7 @@ contains
     logical, optional, intent(in)     :: parallel
     integer, optional, intent(in)     :: comm
     logical, optional, intent(in)     :: overwrite
+    integer, optional, intent(in)     :: compress_lvl
     integer :: format
     logical :: exist
 #ifdef NCDF_PARALLEL
@@ -191,6 +194,8 @@ contains
     ncdf%name     = " "
     if ( present(name) ) ncdf%name = name
     ncdf%grp      = " "
+    ncdf%comp_lvl = 0
+    if ( present(compress_lvl) ) ncdf%comp_lvl = compress_lvl
 
     if ( .not. present(mode) ) then
        ! Our default is the 64 bit offset files... 
@@ -306,7 +311,8 @@ contains
 
   end subroutine ncdf_init
 
-  subroutine ncdf_create(ncdf,filename,mode,overwrite,parallel,comm)
+  subroutine ncdf_create(ncdf,filename,mode,overwrite,parallel,comm, &
+       compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
@@ -316,12 +322,14 @@ contains
     logical, optional, intent(in)  :: overwrite
     logical, optional, intent(in)  :: parallel
     integer, optional, intent(in)  :: comm
+    integer, optional, intent(in)  :: compress_lvl
     integer :: file_format
     logical :: exist
 
     call ncdf_init(ncdf,name=filename, &
          mode=mode,parallel=parallel,comm=comm, &
-         overwrite=overwrite)
+         overwrite=overwrite, &
+         compress_lvl=compress_lvl)
 
     ! We need to correct the definition for netCDF-3 files
     inquire(file=ncdf%name,exist=exist)
@@ -368,7 +376,7 @@ contains
 
   end subroutine ncdf_create
 
-  subroutine ncdf_open(ncdf,filename,mode,parallel,comm)
+  subroutine ncdf_open(ncdf,filename,mode,parallel,comm,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
@@ -377,11 +385,14 @@ contains
     integer, optional, intent(in) :: mode
     logical, optional, intent(in) :: parallel
     integer, optional, intent(in) :: comm
+    integer, optional, intent(in) :: compress_lvl
     integer :: file_format
     logical :: exist
 
     ! Save the general information which should be accesible to all processors
-    call ncdf_init(ncdf,name=filename,mode=mode,parallel=parallel,comm=comm)
+    call ncdf_init(ncdf,name=filename,mode=mode, &
+         parallel=parallel,comm=comm, &
+         compress_lvl=compress_lvl)
 
     ! When we open a file, it will always be in data mode...
     ncdf%define = 1
@@ -423,21 +434,38 @@ contains
 
   end subroutine ncdf_open
 
-  subroutine ncdf_var_par_access(this,name,access)
+  subroutine ncdf_par_access(this,name,access)
     type(hNCDF), intent(inout) :: this
-    character(len=*), intent(in) :: name
-    integer, intent(in) :: access
+    character(len=*), intent(in), optional :: name
+    integer, intent(in), optional :: access
 #ifdef NCDF_PARALLEL
-    integer :: id
-    
-    if ( .not. ncdf_participate(this) ) return
-    
-    call ncdf_inq_var(this,name,id=id)
+    integer :: i,N
+    character(len=250) :: lname
 
-    call ncdf_err(nf90_var_par_access(this%id, id, access), &
-         'Changing par-access (VAR) '//trim(name)//' in file: '//this)
+    if ( .not. ncdf_participate(this) ) return
+    if ( .not. present(access) ) return
+
+    if ( present(name) ) then
+       call var_par(name,access)
+    else
+       call ncdf_inq(this,vars=N)
+       do i = 1 , N
+          call ncdf_err(nf90_inquire_variable(this%id, i, name=lname))
+          call var_par(lname,access)
+       end do
+    end if
+
+  contains
+    subroutine var_par(name,access) 
+      character(len=*), intent(in) :: name
+      integer, intent(in) :: access
+      integer :: id
+      call ncdf_inq_var(this,name,id=id)
+      call ncdf_err(nf90_var_par_access(this%id, id, access), &
+           'Changing par-access (VAR) '//trim(name)//' in file: '//this)
+    end subroutine var_par
 #endif
-  end subroutine ncdf_var_par_access
+  end subroutine ncdf_par_access
 
   subroutine ncdf_close(ncdf)
     type(hNCDF), intent(inout) :: ncdf
@@ -453,7 +481,7 @@ contains
     integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
     integer :: ldims, lvars, latts, lformat, lgrps
-    integer :: grp_id(1000)
+    integer, allocatable :: grp_id(:)
     
     if ( .not. ncdf_participate(ncdf) ) return
 
@@ -479,11 +507,15 @@ contains
 
     if ( present(grps) ) then
        if ( IAND(ncdf%mode,NF90_NETCDF4) == NF90_NETCDF4 ) then
+          allocate(grp_id(50))
           call ncdf_err(nf90_inq_grps(ncdf%id,grps,grp_id), &
                "Inquiring file information "//ncdf)
-          if ( grps > 1000 ) then
-             call ncdf_err(-100,&
-                  'Number of groups exceeded 1000, not allowed.')
+          if ( grps > size(grp_id) ) then
+             deallocate(grp_id)
+             allocate(grp_id(grps))
+             call ncdf_err(nf90_inq_grps(ncdf%id,grps,grp_id), &
+                  "Inquiring file information "//ncdf)
+             deallocate(grp_id)
           end if
        else
           grps = -1
@@ -633,8 +665,10 @@ contains
 
 ! Determine whether we have NetCDF 4 enabled, in that case do compression if asked for
 #ifdef NCDF_4
-    loc_compress_lvl = 0
+    loc_compress_lvl = this%comp_lvl
     if ( present(compress_lvl) ) loc_compress_lvl = compress_lvl
+    ! Compression for parallel access is not allowed
+    if ( this%comm > 0 ) loc_compress_lvl = 0
     if ( loc_compress_lvl > 0 ) then
        iret = nf90_def_var(this%id, name, type, ldims, id, &
             shuffle=.true.,deflate_level=loc_compress_lvl)
@@ -681,7 +715,7 @@ contains
     end if
 
     if ( present(access) ) then
-       call ncdf_var_par_access(this,name,access)
+       call ncdf_par_access(this,name=name,access=access)
     end if
     
   end subroutine ncdf_def_var_generic
@@ -772,6 +806,24 @@ contains
     end if
 
   end subroutine ncdf_def_var_logical
+
+  subroutine ncdf_default(this,access,compress_lvl)
+    type(hNCDF), intent(inout) :: this
+    integer, intent(in), optional :: access, compress_lvl
+
+    if ( .not. ncdf_participate(this) ) return
+
+    if ( present(access) ) call ncdf_par_access(this,access=access)
+
+#ifdef NCDF_4
+    if ( present(compress_lvl) ) then
+       if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) then
+          this%comp_lvl = compress_lvl
+       end if
+    end if
+#endif
+
+  end subroutine ncdf_default
 
   subroutine ncdf_inq_var(ncdf,name,exist,id,size,atts)
     use dictionary

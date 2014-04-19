@@ -198,14 +198,15 @@ contains
     call ncdf_def_dim(ncdf,'z',2)
     dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
     call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=dic,access=NF90_COLLECTIVE)!,compress_lvl=3)
+         atts=dic)
     call delete(dic)
     dic = 'unit'.kv.'m'
     dic = dic//('Name'.kv.'Height')
     call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=dic,access=NF90_COLLECTIVE)!,compress_lvl=3)
+         atts=dic)
     call delete(dic)
     call ncdf_print(ncdf)
+    call ncdf_default(ncdf,access=NF90_COLLECTIVE)
     
     do i = 1 , 9
        if ( mod(i,Nodes) == Node ) then
@@ -225,20 +226,23 @@ contains
   subroutine test_par4_ind()
 #ifdef NCDF_PARALLEL
     call show_where('In ncdf4 parallel')
-    call ncdf_create(ncdf,'NCDF4_par.nc', &
+    call ncdf_create(ncdf,'NCDF4_par_ind.nc', &
          mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL),overwrite=.true.,comm=MPI_Comm_World)
+    ! In case of parallel access, it cannot compress. (so it will 
+    ! set this to zero inside)
     call ncdf_def_dim(ncdf,'x',1)
     call ncdf_def_dim(ncdf,'y',9)
     call ncdf_def_dim(ncdf,'z',2)
     dic = ('unit'.kv.'m')//('Name'.kv.'What is this')
     call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), &
-         atts=dic)!,compress_lvl=3)
+         atts=dic)
     call delete(dic)
     dic = 'unit'.kv.'m'
     dic = dic//('Name'.kv.'Height')
     call ncdf_def_var(ncdf,'h',NF90_DOUBLE,(/'z','y'/), &
-         atts=dic)!,compress_lvl=3)
+         atts=dic)
     call delete(dic)
+    call ncdf_default(ncdf,access=NF90_INDEPENDENT)
     call ncdf_print(ncdf)
     
     do i = 1 , 9
