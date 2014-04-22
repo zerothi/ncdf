@@ -190,6 +190,7 @@ contains
 
   subroutine test_par4()
 #ifdef NCDF_PARALLEL
+    integer, parameter :: N = 9
     call show_where('In ncdf4 parallel')
     call ncdf_create(ncdf,'NCDF4_par.nc', &
          mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL),overwrite=.true.,comm=MPI_Comm_World)
@@ -207,17 +208,29 @@ contains
     call delete(dic)
     call ncdf_print(ncdf)
     call ncdf_default(ncdf,access=NF90_COLLECTIVE)
-    
-    do i = 1 , 9
+
+    do i = 1 , N
        if ( mod(i,Nodes) == Node ) then
           call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))
        end if
     end do
-    do i = 1 , 9
+    ! not working in parallel
+    i = N / Nodes
+    if ( mod(N,Nodes) /= 0 .and. Node < N - i * Nodes ) then
+       i = Node + 1
+       call ncdf_put_var(ncdf,'v',real(-1,8),start=(/1,i/),count=(/0,0/))
+    end if
+
+    do i = 1 , N
        if ( mod(i,Nodes) == Node ) then
           call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/),count=(/2/))
        end if
     end do
+    i =  N / Nodes
+    if ( mod(N,Nodes) /= 0 .and. Node < N - i * Nodes ) then
+       i = Node + 1
+       call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/),count=(/0,0/))
+    end if
     call ncdf_close(ncdf)
     call check_nc(''//ncdf)
 #endif
@@ -225,7 +238,7 @@ contains
 
   subroutine test_par4_ind()
 #ifdef NCDF_PARALLEL
-    call show_where('In ncdf4 parallel')
+    call show_where('In ncdf4 parallel, independent')
     call ncdf_create(ncdf,'NCDF4_par_ind.nc', &
          mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL),overwrite=.true.,comm=MPI_Comm_World)
     ! In case of parallel access, it cannot compress. (so it will 

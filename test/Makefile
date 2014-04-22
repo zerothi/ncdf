@@ -21,6 +21,7 @@ all: $(TESTS)
 test_ncdf3: test_ncdf.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
 	./$@
+#mpirun -np 2 ./$@
 
 .PHONY: clean
 clean:

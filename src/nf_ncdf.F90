@@ -101,9 +101,9 @@ module nf_ncdf
   ! We add a specific NetCDF handle for dealing with files
   type :: hNCDF
      ! The file-handle for the netCDF-file
-     integer            :: id
+     integer            :: id = -1
      ! Whether the file is handled parallely
-     logical            :: parallel
+     logical            :: parallel = .false.
      ! The mode of the file
      integer            :: mode
      ! If define < 0, then no enddef, or redefs will be performed
@@ -111,13 +111,13 @@ module nf_ncdf
      ! If define == 1 then it is in data   mode (needed for netCDF-3)
      integer            :: define
      ! The name of the netCDF-file
-     character(len=250) :: name
+     character(len=250) :: name = " "
      ! the group of the netCDF-file (i.e. a file within a file)
-     character(len=NF90_MAX_NAME) :: grp
+     character(len=NF90_MAX_NAME) :: grp = " "
      ! The communicator describing the parallel activity
-     integer            :: comm 
+     integer            :: comm = - 1
      ! Default compression level
-     integer            :: comp_lvl
+     integer            :: comp_lvl = 0
   end type hNCDF
 
   ! Interface the concatenation
@@ -333,18 +333,18 @@ contains
 
     ! We need to correct the definition for netCDF-3 files
     inquire(file=ncdf%name,exist=exist)
+    if ( present(overwrite) ) then
+       if ( overwrite ) then
+          exist = .false.
+       end if
+    end if
     ncdf%define = 0
 
     if ( .not. ncdf_participate(ncdf) ) return
 
-    if ( .not. present(overwrite) .and. exist) then
+    if ( exist ) then
        call ncdf_die("File: "//ncdf//" already exists!. "//&
-            "Please delete the file.")
-    else
-       if ( .not. overwrite .and. exist ) then
-          call ncdf_die("File: "//ncdf//" already exists!. "//&
-               "Please delete the file.")
-       end if
+            "Please delete the file (or request overwritting).")
     end if
 
     if ( ncdf%parallel .and. ncdf%comm >= 0 ) then
@@ -825,7 +825,7 @@ contains
 
   end subroutine ncdf_default
 
-  subroutine ncdf_inq_var(ncdf,name,exist,id,size,atts)
+  subroutine ncdf_inq_var_def(ncdf,name,exist,id,size,atts)
     use dictionary
     type(hNCDF),      intent(inout) :: ncdf
     character(len=*), intent(in)    :: name
@@ -878,16 +878,17 @@ contains
           att      = " "
           call ncdf_err(nf90_inq_attname(ncdf%id, lid, i, att_name), &
                "Retrieving the attribute name for file: "//ncdf)
+
           ! TODO
           ! For the moment we can only retrieve attributes of characters...
-          ! This should be leveraged when the dictionary can handle arbitrary values...
+          ! This should be leveraged as the dictionary can handle arbitrary values...
           call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), att), &
                "Retrieving the attribute value for file: "//ncdf)
           atts = atts//(trim(att_name).KV.trim(att))
        end do
     end if
 
-  end subroutine ncdf_inq_var
+  end subroutine ncdf_inq_var_def
 
   subroutine ncdf_inq_dim(ncdf,name,exist,id,len)
     type(hNCDF),      intent(inout) :: ncdf
@@ -1198,8 +1199,10 @@ contains
           write(*,"(a20,a)") "File format:        ","Classic 64Bit"
        case ( NF90_FORMAT_NETCDF4 )
           write(*,"(a20,a)") "File format:        ","NetCDF4"
+          write(*,"(a20,i0)")"Default compression:",ncdf%comp_lvl
        case ( NF90_FORMAT_NETCDF4_CLASSIC )
           write(*,"(a20,a)") "File format:        ","NetCDF4 Classic format"
+          write(*,"(a22,i0)")"Default compression:  ",ncdf%comp_lvl
        case default
           write(*,"(a20,a)") "File format:        ","Could not be determined"
        end select

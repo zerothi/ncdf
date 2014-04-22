@@ -50,6 +50,16 @@ done
 _psnl "end interface ncdf_${sub}"
 done
 done
+# variable and defining fill-values
+for sub in inq_var def_fill ; do
+_psnl "interface ncdf_$sub"
+[ "$sub" == "inq_var" ] && _psnl "module procedure ncdf_${sub}_def"
+for v in ${vars[@]} ; do
+    d=0
+    _psnl "module procedure ${sub}_${v}${d}"
+done
+_psnl "end interface ncdf_$sub"
+done
 } > ncdf_interface.inc
 
 {
@@ -68,13 +78,14 @@ for v in ${vars[@]} ; do
 	    _psnl "#define IS_COMPLEX"
 	    _psnl "#define REAL_TYPE ${name[${c_to_r[$v]}]}"
 	else
-	    _psnl "#undef IS_COMPLEX"
+	    _psnl "#define REAL_TYPE VAR_TYPE"
 	fi
         # Attributes only allowed for dimensions larger than 1
 	if [ $d -le 1 ] && [ ${has_att[$v]} -eq 1 ]; then
 	    _psnl '#include "ncdf_att_inc.inc"'
 	fi
 	_psnl '#include "ncdf_var_inc.inc"'
+	_psnl "#undef IS_COMPLEX"
 	_psnl "#undef REAL_TYPE"
 	_psnl "#undef VAR"
 	_psnl "#undef DIM"
