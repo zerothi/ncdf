@@ -636,8 +636,8 @@ contains
 ! Simplify the addition of a variable...
 ! This routine *MUST* be called after ncdf_participate 
 ! (however, as it is a local routine the burden is ours, not the programmers) 
-  subroutine ncdf_def_var_generic(this,name,type,dims,id,atts,compress_lvl, &
-       access)
+  subroutine ncdf_def_var_generic(this,name,type,dims,id,atts, &
+       compress_lvl,shuffle, access)
     use iso_var_str
     use variable
     use dictionary
@@ -648,11 +648,13 @@ contains
     integer,          intent(out)   :: id
     type(dict),                      optional :: atts
     integer,          intent(in),    optional :: compress_lvl
+    logical,          intent(in),    optional :: shuffle
     integer,          intent(in),    optional :: access
     type(dict) :: att
     type(var)  :: at_var
 #ifdef NCDF_4
     integer :: loc_compress_lvl
+    logical :: lshuffle
 #endif
     integer :: iret, i, ldims(size(dims))
     character(len=100) :: key
@@ -667,11 +669,13 @@ contains
 #ifdef NCDF_4
     loc_compress_lvl = this%comp_lvl
     if ( present(compress_lvl) ) loc_compress_lvl = compress_lvl
+    lshuffle = .true.
+    if ( present(shuffle) ) lshuffle = shuffle
     ! Compression for parallel access is not allowed
     if ( this%comm > 0 ) loc_compress_lvl = 0
     if ( loc_compress_lvl > 0 ) then
        iret = nf90_def_var(this%id, name, type, ldims, id, &
-            shuffle=.true.,deflate_level=loc_compress_lvl)
+            shuffle=lshuffle,deflate_level=loc_compress_lvl)
     else
        iret = nf90_def_var(this%id, name, type, ldims, id)
     end if
@@ -721,7 +725,7 @@ contains
   end subroutine ncdf_def_var_generic
 
   subroutine ncdf_def_var_integer(this, name, type, dims, &
-       atts, compress_lvl, fill, &
+       atts, compress_lvl, shuffle, fill, &
        access)
     use dictionary
     type(hNCDF), intent(inout) :: this
@@ -730,14 +734,14 @@ contains
     character(len=*), intent(in) :: dims(:)
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
-    logical, intent(in), optional :: fill
+    logical, intent(in), optional :: shuffle, fill
     integer, intent(in), optional :: access
     integer :: id
 
     if ( .not. ncdf_participate(this) ) return
 
     call ncdf_def_var_generic(this, name, type, dims, id, &
-         atts=atts, compress_lvl=compress_lvl, &
+         atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
          access=access)
     if ( present(fill) ) then
        if ( fill ) then
@@ -752,7 +756,7 @@ contains
   end subroutine ncdf_def_var_integer
 
   subroutine ncdf_def_var_logical(this, name, type, dims, &
-       atts, compress_lvl, fill, &
+       atts, compress_lvl, shuffle, fill, &
        access)
     use dictionary
     type(hNCDF), intent(inout) :: this
@@ -761,7 +765,7 @@ contains
     character(len=*), intent(in) :: dims(:)
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
-    logical, intent(in), optional :: fill
+    logical, intent(in), optional :: shuffle, fill
     integer, intent(in), optional :: access
     integer :: id
     integer :: ltype
@@ -781,7 +785,7 @@ contains
     end if
 
     call ncdf_def_var_generic(this, "Re"//trim(name), ltype, dims, id, &
-         atts=atts, compress_lvl=compress_lvl, &
+         atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
          access=access)
     if ( present(fill) ) then
        if ( fill ) then
@@ -793,7 +797,7 @@ contains
        end if
     end if
     call ncdf_def_var_generic(this, "Im"//trim(name), ltype, dims, id, &
-         atts=atts, compress_lvl=compress_lvl, &
+         atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
          access=access)
     if ( present(fill) ) then
        if ( fill ) then
