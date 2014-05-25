@@ -4,26 +4,38 @@
 
 Every section in this part lists the change of the versions
 
-* Dictionary
+** <2014-05-25 Sun>
+If the netcdf model is a classic model we can also enable 
+the compression.
 
-The dictionary will make use of the var format for retaining any type of
-data. This will allow for greater structure etc.
+** <2014-05-25 Sun>
+For passing attributes to the def_var routine we need
+to ensure that the dictionary gets deleted if the user 
+adds the key 'ATT_DELETE'.
+However, for cases where some nodes are not part of the 
+file we still need to enforce this to handle memory leakage
+correctly. This has been fixed.
 
-** Rely on libvar.a rather than chars <2013-11-11 Mon>
-The dictionary values are now the type(var) which eases
-the interfacing between different segments of the code.
-We allow to fully utilise the "assign" and "associate"
-function calls in the assignment of the dictionary by following the 
-operators:
-   .KV. (assign)
-   .KPV. (associate)
+** <2014-05-25 Sun>
+If a user request to change the default parallel access
+to variables we will return immediately if the file is not
+a parallel file.
 
-* Feature
+** <2014-05-25 Sun>
+Added possibility to delete the dictionary after calling
+the def_var routine. 
+By adding the key 'ATT_DELETE' it will delete all entries.
+In case one is worried about memory leakage this can be used.
 
-** <2013-08-29 Thu>
+It is necessary, calling def_var(...,atts=('hello'.kv.'a'))
+will result in memory leakage.
+
+
+* Feature requests
 
 - [ ] Variable filling of specific values
       I.e. add arguments to ncdf_def_var, etc
+
 - [ ] <<inq_fill>> Adding FILL to the inquiry routines
       ncdf_inq(ncdf,...)
 

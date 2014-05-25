@@ -1,21 +1,10 @@
 program test_ncdf
   use dictionary
   use nf_ncdf
-  use iso_c_binding
-#ifdef NCDF_PARALLEL
-  use mpi
-#endif
+
+  use tst_ncdf_util
 
   implicit none
-  
-  interface c_interface
-     function nf90_set_log_level(level) bind (C, name = "nc_set_log_level")
-       use iso_c_binding
-       implicit none
-       integer(c_int) :: nf90_set_log_level
-       integer(c_int), intent (in) :: level
-     end function nf90_set_log_level
-  end interface c_interface
 
   type(hNCDF) :: ncdf
   integer :: Node, Nodes, i
@@ -65,37 +54,6 @@ program test_ncdf
 #endif
 
 contains
-
-  subroutine show_where(c)
-    character(len=*), intent(in) :: c
-    if ( Node == 0 ) then
-       write(*,*) c
-    end if
-  end subroutine show_where
-
-  subroutine goto_dir(a)
-    character(len=*), intent(in) :: a
-    if ( Node == 0 ) then
-       call system('mkdir -p '//a)
-    end if
-    call chdir(a) 
-  end subroutine goto_dir
-
-  subroutine check_nc(file)
-    character(len=*), intent(in) :: file
-    logical :: exist
-    return
-    inquire(file=file,exist=exist)
-#ifdef NCDF_PARALLEL
-    call MPI_barrier(MPI_COMM_world,MPIerror)
-#endif
-    if ( exist ) then
-       if ( Node == 0 ) then
-          call system('ncdump -v v '//file)
-          call system('ncdump -k '//file)
-       end if
-    end if
-  end subroutine check_nc
 
   subroutine test_seq3()
     call show_where('In ncdf3 Sequential')

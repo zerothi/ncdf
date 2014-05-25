@@ -13,8 +13,8 @@ ncdf:
 	(cd lib/fvar ; make lib)
 	(cd src ; make lib)
 
-.PHONY: tests
-tests: ncdf
+.PHONY: test
+test: ncdf
 	(cd test ; make all)
 
 .PHONY: clean

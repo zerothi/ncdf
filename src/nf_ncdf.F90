@@ -445,6 +445,12 @@ contains
     if ( .not. ncdf_participate(this) ) return
     if ( .not. present(access) ) return
 
+    ! We will only allow a change of the variable
+    ! access if the netcdf-file is parallel.
+    if ( .not. this%parallel ) then
+       return
+    end if
+
     if ( present(name) ) then
        call var_par(name,access)
     else
@@ -712,7 +718,7 @@ contains
        
        ! If the user adds this key, the dictionary will be deleted
        ! after usage...
-       if ( atts .has. "ATT_DELETE" ) then
+       if ( "ATT_DELETE" .in. atts ) then
           call delete(atts)
        end if
        
@@ -738,7 +744,17 @@ contains
     integer, intent(in), optional :: access
     integer :: id
 
-    if ( .not. ncdf_participate(this) ) return
+    if ( .not. ncdf_participate(this) ) then
+       ! in case the attributes are present, we
+       ! still need to clean-up if asked
+       if ( present(atts) ) then
+          if ( 'ATT_DELETE' .in. atts ) then
+             call delete(atts)
+          end if
+       end if
+
+       return
+    end if
 
     call ncdf_def_var_generic(this, name, type, dims, id, &
          atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
@@ -770,7 +786,17 @@ contains
     integer :: id
     integer :: ltype
 
-    if ( .not. ncdf_participate(this) ) return
+    if ( .not. ncdf_participate(this) ) then
+       ! in case the attributes are present, we
+       ! still need to clean-up if asked
+       if ( present(atts) ) then
+          if ( 'ATT_DELETE' .in. atts ) then
+             call delete(atts)
+          end if
+       end if
+
+       return
+    end if
 
     if ( type .eqv. NF90_DOUBLE_COMPLEX ) then
        ltype = NF90_DOUBLE
@@ -822,6 +848,9 @@ contains
 #ifdef NCDF_4
     if ( present(compress_lvl) ) then
        if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) then
+          this%comp_lvl = compress_lvl
+       end if
+       if ( iand(NF90_CLASSIC_MODEL,this%mode) == NF90_CLASSIC_MODEL ) then
           this%comp_lvl = compress_lvl
        end if
     end if
@@ -1203,10 +1232,10 @@ contains
           write(*,"(a20,a)") "File format:        ","Classic 64Bit"
        case ( NF90_FORMAT_NETCDF4 )
           write(*,"(a20,a)") "File format:        ","NetCDF4"
-          write(*,"(a20,i0)")"Default compression:",ncdf%comp_lvl
+          write(*,"(a20,i7)")"Default compression:",ncdf%comp_lvl
        case ( NF90_FORMAT_NETCDF4_CLASSIC )
           write(*,"(a20,a)") "File format:        ","NetCDF4 Classic format"
-          write(*,"(a22,i0)")"Default compression:  ",ncdf%comp_lvl
+          write(*,"(a22,i7)")"Default compression:  ",ncdf%comp_lvl
        case default
           write(*,"(a20,a)") "File format:        ","Could not be determined"
        end select
