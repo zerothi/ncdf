@@ -138,7 +138,10 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
 #endif
   if ( .not. ncdf_participate(this) ) return
 #ifdef IS_COMPLEX
-  call ncdf_inq_var_def(this,'Re'//name,id=lid,size=size,atts=atts)
+  call ncdf_inq_var_def(this,'Re'//name,id=lid,exist=exist,size=size,atts=atts)
+  if ( present(exist) ) then
+     if ( .not. exist ) return
+  end if
   if ( present(id) ) id(1) = lid
   call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
        'Retrieving variable-fill (VAR) Re-'//trim(name)//' in file: '//this)
@@ -158,7 +161,10 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
      fill_val = cmplx(0.,0.)
 !  end if
 #else
-  call ncdf_inq_var_def(this,name,id=lid,size=size,atts=atts)
+  call ncdf_inq_var_def(this,name,id=lid,exist=exist,size=size,atts=atts)
+  if ( present(exist) ) then
+     if ( .not. exist ) return
+  end if
   if ( present(id) ) id = lid
   call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
        'Retrieving variable-fill (VAR) '//trim(name)//' in file: '//this)
