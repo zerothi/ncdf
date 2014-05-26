@@ -1,6 +1,8 @@
 .SUFFIXES: .f90 .o .a
 include ../arch.make
 
+# The VPATH can be different, however the tree-structure
+# has to be the same in this case.
 VPATH?=$(shell pwd)
 
 .PHONY: default
@@ -11,10 +13,11 @@ PP += $(FPPFLAGS)
 # The different libraries
 OBJS = nf_ncdf.o
 
-INC += -I$(VPATH)/../lib/fvar
+INC      += -I../lib/fvar
+INCFLAGS += -I../lib/fvar
 
 LIB = libncdf.a
-LIBVARDICT  = $(VPATH)/../lib/fvar/libvardict.a
+LIBVARDICT = ../lib/fvar/libvardict.a
 
 .PHONY: lib
 lib: $(LIBVARDICT) $(LIB)
