@@ -1,5 +1,7 @@
-
 include arch.make
+
+# Set the default VPATH
+VPATH?=$(shell pwd)
 
 .PHONY: default
 default: all
@@ -10,12 +12,12 @@ all: ncdf
 
 .PHONY: ncdf
 ncdf:
-	(cd lib/fvar ; make lib)
-	(cd src ; make lib)
+	(cd lib/fvar ; make "VPATH=$(VPATH)/lib/fvar" lib)
+	(cd src ; make "VPATH=$(VPATH)/src" lib)
 
 .PHONY: test
 test: ncdf
-	(cd test ; make all)
+	(cd test ; make "VPATH=$(VPATH)/test" all)
 
 .PHONY: clean
 clean:

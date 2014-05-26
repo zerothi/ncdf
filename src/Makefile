@@ -1,6 +1,8 @@
 .SUFFIXES: .f90 .o .a
 include ../arch.make
 
+VPATH?=$(shell pwd)
+
 .PHONY: default
 default: lib
 
@@ -9,10 +11,10 @@ PP += $(FPPFLAGS)
 # The different libraries
 OBJS = nf_ncdf.o
 
-INC += -I../lib/fvar
+INC += -I$(VPATH)/../lib/fvar
 
 LIB = libncdf.a
-LIBVARDICT  = ../lib/fvar/libvardict.a
+LIBVARDICT  = $(VPATH)/../lib/fvar/libvardict.a
 
 .PHONY: lib
 lib: $(LIBVARDICT) $(LIB)
@@ -31,9 +33,9 @@ s/[[:space:]]*\#\([^i][^[:space:]]*\)/"\1"/g;\
 s/"endif"/\n\#endif/g'
 .PHONY: prep
 prep:
-	./ncdf.sh
-	$(PP) nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
-	$(PP) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
+	$(VPATH)/ncdf.sh
+	$(PP) -I$(VPATH) nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) -I$(VPATH) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
 
 .PHONY: clean
 clean:
