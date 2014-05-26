@@ -34,7 +34,7 @@ s/"endif"/\n\#endif/g'
 .PHONY: prep
 prep:
 	$(VPATH)/ncdf.sh
-	$(PP) -I$(VPATH) nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) -I$(VPATH) $(VPATH)/nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
 	$(PP) -I$(VPATH) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
 
 .PHONY: clean
