@@ -478,7 +478,11 @@ contains
 
     if ( .not. ncdf_participate(ncdf) ) return
 
+    if ( ncdf%id < 0 ) return
+
     call ncdf_err(nf90_close(ncdf%id),"Closing NetCDF file: "//ncdf)
+    
+    ncdf%id = -1
 
   end subroutine ncdf_close
 
