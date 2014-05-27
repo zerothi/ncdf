@@ -4,6 +4,15 @@
 
 Every section in this part lists the change of the versions
 
+** <2014-05-27 Tue>
+Enabled retrieval of a dictionary containing all 
+attributes associated with a variable or the global
+attributes.
+
+** <2014-05-27 Tue>
+Extended attribute inquiries to also retrieve
+the data-type and the data length of the attributes.
+
 ** <2014-05-25 Sun>
 If the netcdf model is a classic model we can also enable 
 the compression.

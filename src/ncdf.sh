@@ -39,6 +39,7 @@ done
 for ssub in put get ; do
 for sub in ${ssub}_gatt ${ssub}_att ; do
 _psnl "interface ncdf_${sub}"
+_psnl "module procedure ${sub}"
 for v in ${vars[@]} ; do
     [ ${has_att[$v]} -eq 0 ] && continue
     for d in `seq 0 ${N[$v]}` ; do 

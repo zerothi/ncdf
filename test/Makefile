@@ -39,4 +39,4 @@ tst_ncdf_4: tst_ncdf_4.o
 .PHONY: clean
 clean:
 	-rm -f *.o *.mod $(LIB_TST) tst_ncdf_3
-
+	-rm -f *.nc

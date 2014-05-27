@@ -164,17 +164,17 @@ contains
 ! Every routine in this module needs NetCDF
 ! So it is sourrounded by this...
 
-  subroutine ncdf_copy(ncdf,copy)
-    type(hNCDF), intent(in) :: ncdf
+  subroutine ncdf_copy(this,copy)
+    type(hNCDF), intent(in) :: this
     type(hNCDF), intent(out) :: copy
-    copy = ncdf
+    copy = this
   end subroutine ncdf_copy
 
-  subroutine ncdf_init(ncdf,name,mode,parallel,comm,overwrite,compress_lvl)
+  subroutine ncdf_init(this,name,mode,parallel,comm,overwrite,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
-    type(hNCDF),       intent(inout)  :: ncdf
+    type(hNCDF),       intent(inout)  :: this
     character(len=*), optional, intent(in) :: name
     integer, optional, intent(in)     :: mode
     logical, optional, intent(in)     :: parallel
@@ -187,30 +187,30 @@ contains
     integer :: MPIerror
 #endif
 
-    ncdf%id       = -1
-    ncdf%parallel = .false.
-    ncdf%define   = 0
-    ncdf%mode     = 0
-    ncdf%name     = " "
-    if ( present(name) ) ncdf%name = name
-    ncdf%grp      = " "
-    ncdf%comp_lvl = 0
-    if ( present(compress_lvl) ) ncdf%comp_lvl = compress_lvl
+    this%id       = -1
+    this%parallel = .false.
+    this%define   = 0
+    this%mode     = 0
+    this%name     = " "
+    if ( present(name) ) this%name = name
+    this%grp      = " "
+    this%comp_lvl = 0
+    if ( present(compress_lvl) ) this%comp_lvl = compress_lvl
 
     if ( .not. present(mode) ) then
        ! Our default is the 64 bit offset files... 
        ! The best backwards compatibility format
-       ncdf%mode = IOR(ncdf%mode,NF90_64BIT_OFFSET)
+       this%mode = IOR(this%mode,NF90_64BIT_OFFSET)
     end if
 
 
     ! If the parallel interface is not applied we need the communicator 
     ! to be negative
-    ncdf%comm = -1 
+    this%comm = -1 
 
     ! This will create the correct order
     if ( present(parallel) ) then
-       ncdf%parallel = parallel
+       this%parallel = parallel
        ! The parallel flag is for the sequential parallel access !
        ! This will be reset to a zero mode if a communicator is supplied
        ! In this way we can have "parallel" access for reading purposes...
@@ -218,9 +218,9 @@ contains
           ! Check that the mode is not existing in the passed mode
           if ( present(mode) ) then
              if ( iand(NF90_SHARE,mode) /= NF90_SHARE ) &
-                  ncdf%mode = NF90_SHARE
+                  this%mode = NF90_SHARE
           else
-             ncdf%mode = NF90_SHARE
+             this%mode = NF90_SHARE
           end if
        end if
     end if
@@ -229,13 +229,13 @@ contains
        if ( comm < 0 ) then
           ! If the communicator is negative we
           ! must assume that it is not parallel
-          ncdf%comm = comm
+          this%comm = comm
 #ifdef NCDF_PARALLEL
        else
           ! If the communicator is present, 
           ! so must the parallel execution...
-          ncdf%parallel = .true.
-          ncdf%comm = comm
+          this%parallel = .true.
+          this%comm = comm
           ! We cannot ask for no parallel access and supply a communicator (makes no sense)
           if ( present(parallel) ) then
              if ( .not. parallel ) then
@@ -245,65 +245,65 @@ contains
           end if
           ! If a communicator is supplied we need to "delete" the NF90_SHARE we sat 
           ! "possibly" above
-          ncdf%mode = 0
+          this%mode = 0
 #endif
        end if
     end if
     
 #ifdef NCDF_PARALLEL
     ! We need only do this if the file exists
-    inquire(file=""//ncdf,exist=exist)
+    inquire(file=""//this,exist=exist)
     if ( present(overwrite) .and. exist ) then
        exist = .not. overwrite
     end if
-    if ( ncdf%parallel .and. exist ) then
+    if ( this%parallel .and. exist ) then
        ! In case the implementation does not allow PCDF
        ! The = 0 is the standard with no parallel enabled...
        format = 0
 
        ! We need to figure out whether the file is 
        ! a NetCDF3 or NetCDF4 file...
-       call ncdf_inq(""//ncdf,format=format)
-       if ( ncdf%comm >= 0 ) then
-          call MPI_Bcast(format,1,MPI_Integer,0,ncdf%comm,MPIerror)
+       call ncdf_inq(""//this,format=format)
+       if ( this%comm >= 0 ) then
+          call MPI_Bcast(format,1,MPI_Integer,0,this%comm,MPIerror)
        end if
 
        ! If the parallel flag has been set, we need to examine that
        ! We will follow the parallel flag (and limit to the parallel accesible processors)
        select case ( format )
        case ( NF90_FORMAT_CLASSIC )
-          ncdf%mode = NF90_PNETCDF
+          this%mode = NF90_PNETCDF
        case ( NF90_FORMAT_64BIT )
-          ncdf%mode = NF90_PNETCDF
+          this%mode = NF90_PNETCDF
        case ( NF90_FORMAT_NETCDF4, NF90_FORMAT_NETCDF4_CLASSIC )
           if ( present(mode) ) then
              if ( iand(NF90_MPIIO   ,mode) /= NF90_MPIIO &
                   .and. &
                   iand(NF90_MPIPOSIX,mode) /= NF90_MPIPOSIX) then
-                ncdf%mode = NF90_MPIIO
+                this%mode = NF90_MPIIO
              end if
           else
-             ncdf%mode = NF90_MPIIO
+             this%mode = NF90_MPIIO
           end if
        end select
     end if
 #endif
 
     if ( present(mode) ) then
-       ncdf%mode = IOR(ncdf%mode,mode)
+       this%mode = IOR(this%mode,mode)
     end if
 
 #ifdef NCDF_PARALLEL
     ! If the user has forgotton the correct notation of the file format
-    if ( iand(NF90_MPIIO,ncdf%mode) == NF90_MPIIO ) then
-       ncdf%mode = IOR(ncdf%mode,NF90_NETCDF4)
-    else if ( iand(NF90_MPIPOSIX,ncdf%mode) == NF90_MPIPOSIX ) then
-       ncdf%mode = IOR(ncdf%mode,NF90_NETCDF4)
-       if ( iand(NF90_64BIT_OFFSET,ncdf%mode) == NF90_64BIT_OFFSET ) &
+    if ( iand(NF90_MPIIO,this%mode) == NF90_MPIIO ) then
+       this%mode = IOR(this%mode,NF90_NETCDF4)
+    else if ( iand(NF90_MPIPOSIX,this%mode) == NF90_MPIPOSIX ) then
+       this%mode = IOR(this%mode,NF90_NETCDF4)
+       if ( iand(NF90_64BIT_OFFSET,this%mode) == NF90_64BIT_OFFSET ) &
             call ncdf_die("You have requested netCDF4 parallel "//&
             "IO together with a netCDF3 file.")
-    else if ( iand(NF90_PNETCDF,ncdf%mode) == NF90_PNETCDF ) then
-       if ( iand(NF90_NETCDF4,ncdf%mode) == NF90_NETCDF4 ) &
+    else if ( iand(NF90_PNETCDF,this%mode) == NF90_PNETCDF ) then
+       if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) &
             call ncdf_die("You have requested netCDF3 parallel "//&
             "IO together with a netCDF4 file.")
     end if
@@ -311,12 +311,12 @@ contains
 
   end subroutine ncdf_init
 
-  subroutine ncdf_create(ncdf,filename,mode,overwrite,parallel,comm, &
+  subroutine ncdf_create(this,filename,mode,overwrite,parallel,comm, &
        compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
-    type(hNCDF),       intent(inout) :: ncdf    
+    type(hNCDF),       intent(inout) :: this    
     character(len=*),  intent(in)  :: filename
     integer, optional, intent(in)  :: mode
     logical, optional, intent(in)  :: overwrite
@@ -326,61 +326,61 @@ contains
     integer :: file_format
     logical :: exist
 
-    call ncdf_init(ncdf,name=filename, &
+    call ncdf_init(this,name=filename, &
          mode=mode,parallel=parallel,comm=comm, &
          overwrite=overwrite, &
          compress_lvl=compress_lvl)
 
     ! We need to correct the definition for netCDF-3 files
-    inquire(file=ncdf%name,exist=exist)
+    inquire(file=this%name,exist=exist)
     if ( present(overwrite) ) then
        if ( overwrite ) then
           exist = .false.
        end if
     end if
-    ncdf%define = 0
+    this%define = 0
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     if ( exist ) then
-       call ncdf_die("File: "//ncdf//" already exists!. "//&
+       call ncdf_die("File: "//this//" already exists!. "//&
             "Please delete the file (or request overwritting).")
     end if
 
-    if ( ncdf%parallel .and. ncdf%comm >= 0 ) then
+    if ( this%parallel .and. this%comm >= 0 ) then
 #ifdef NCDF_PARALLEL
-       call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id, &
-            comm = ncdf%comm, info=MPI_INFO_NULL), &
-            "Creating file: "//ncdf//" with communicator")
+       call ncdf_err(nf90_create(filename, this%mode , this%id, &
+            comm = this%comm, info=MPI_INFO_NULL), &
+            "Creating file: "//this//" with communicator")
 #else
        call ncdf_err(-100,"Not compiled with communicater parallel")
 #endif
-    else if ( ncdf%parallel ) then
-       call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id), &
-            "Creating file: "//ncdf//" in parallel")
+    else if ( this%parallel ) then
+       call ncdf_err(nf90_create(filename, this%mode , this%id), &
+            "Creating file: "//this//" in parallel")
     else
-       call ncdf_err(nf90_create(filename, ncdf%mode , ncdf%id), &
-            "Creating file: "//ncdf)
+       call ncdf_err(nf90_create(filename, this%mode , this%id), &
+            "Creating file: "//this)
     end if
     ! We could check for mode == NF90_SHARE in case of parallel...
     ! However, it does not make sense as the other is still correct, just slow
 
     ! In case the NetCDF format is a CDF4 file, we do not need to alter define
     ! modes
-    call ncdf_inq(ncdf, format=file_format)
+    call ncdf_inq(this, format=file_format)
     select case ( file_format ) 
     case ( NF90_FORMAT_NETCDF4 )
        ! NetCDF4-classic still uses define/undefine
-       ncdf%define = -1
+       this%define = -1
     end select
 
   end subroutine ncdf_create
 
-  subroutine ncdf_open(ncdf,filename,mode,parallel,comm,compress_lvl)
+  subroutine ncdf_open(this,filename,mode,parallel,comm,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
-    type(hNCDF),    intent(inout)   :: ncdf    
+    type(hNCDF),    intent(inout)   :: this    
     character(len=*), intent(in)  :: filename
     integer, optional, intent(in) :: mode
     logical, optional, intent(in) :: parallel
@@ -390,14 +390,14 @@ contains
     logical :: exist
 
     ! Save the general information which should be accesible to all processors
-    call ncdf_init(ncdf,name=filename,mode=mode, &
+    call ncdf_init(this,name=filename,mode=mode, &
          parallel=parallel,comm=comm, &
          compress_lvl=compress_lvl)
 
     ! When we open a file, it will always be in data mode...
-    ncdf%define = 1
+    this%define = 1
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
     
     inquire(file=filename, exist=exist)
     if ( .not. exist ) then
@@ -407,29 +407,29 @@ contains
 
     ! If we have not added a mode it must be for non-writing purposes
     if ( .not. present(mode) ) then
-       ncdf%mode = IOR(ncdf%mode,NF90_NOWRITE)
+       this%mode = IOR(this%mode,NF90_NOWRITE)
     end if
 
-    if ( ncdf%parallel .and. ncdf%comm >= 0 ) then
+    if ( this%parallel .and. this%comm >= 0 ) then
 #ifdef NCDF_PARALLEL
-       call ncdf_err(nf90_open(filename, ncdf%mode , ncdf%id, &
-            comm = ncdf%comm, info=MPI_INFO_NULL), &
-               "Opening file: "//ncdf//" with communicator")
+       call ncdf_err(nf90_open(filename, this%mode , this%id, &
+            comm = this%comm, info=MPI_INFO_NULL), &
+               "Opening file: "//this//" with communicator")
 #else
        call ncdf_err(-100,"Code not compiled with NCDF_PARALLEL")
 #endif
-    else if ( ncdf%parallel ) then
-       call ncdf_err(nf90_open(filename, ncdf%mode , ncdf%id), &
-            "Opening file: "//ncdf//" in parallel")
+    else if ( this%parallel ) then
+       call ncdf_err(nf90_open(filename, this%mode , this%id), &
+            "Opening file: "//this//" in parallel")
     else
-       call ncdf_err(nf90_open(filename, ncdf%mode , ncdf%id), &
-            "Opening file: "//ncdf)
+       call ncdf_err(nf90_open(filename, this%mode , this%id), &
+            "Opening file: "//this)
     end if
     
-    call ncdf_inq(ncdf, format=file_format)
+    call ncdf_inq(this, format=file_format)
     select case ( file_format ) 
     case ( NF90_FORMAT_NETCDF4 )
-       ncdf%define = -1
+       this%define = -1
     end select
 
   end subroutine ncdf_open
@@ -473,31 +473,31 @@ contains
 #endif
   end subroutine ncdf_par_access
 
-  subroutine ncdf_close(ncdf)
-    type(hNCDF), intent(inout) :: ncdf
+  subroutine ncdf_close(this)
+    type(hNCDF), intent(inout) :: this
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    if ( ncdf%id < 0 ) return
+    if ( this%id < 0 ) return
 
-    call ncdf_err(nf90_close(ncdf%id),"Closing NetCDF file: "//ncdf)
+    call ncdf_err(nf90_close(this%id),"Closing NetCDF file: "//this)
     
-    ncdf%id = -1
+    this%id = -1
 
   end subroutine ncdf_close
 
-  subroutine ncdf_inq_ncdf(ncdf,dims,vars,atts,format,grps,exist)
-    type(hNCDF), intent(in) :: ncdf
+  subroutine ncdf_inq_ncdf(this,dims,vars,atts,format,grps,exist)
+    type(hNCDF), intent(in) :: this
     integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
     integer :: ldims, lvars, latts, lformat, lgrps
     integer, allocatable :: grp_id(:)
     
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     ! A file-check has been requested...
     if ( present(exist) ) then
-       inquire(file=ncdf%name,exist=exist)
+       inquire(file=this%name,exist=exist)
        ! if it does not exist we simply return
        ! this ensures that the user can request all the information 
        ! at once
@@ -506,8 +506,8 @@ contains
        end if
     end if
 
-    call ncdf_err(nf90_inquire(ncdf%id,ldims,lvars,latts,formatNum=lformat), &
-         "Inquiring file information "//ncdf)
+    call ncdf_err(nf90_inquire(this%id,ldims,lvars,latts,formatNum=lformat), &
+         "Inquiring file information "//this)
 
     ! Copy over requested information...
     if ( present(dims) )   dims   = ldims
@@ -516,15 +516,15 @@ contains
     if ( present(format) ) format = lformat
 
     if ( present(grps) ) then
-       if ( IAND(ncdf%mode,NF90_NETCDF4) == NF90_NETCDF4 ) then
+       if ( IAND(this%mode,NF90_NETCDF4) == NF90_NETCDF4 ) then
           allocate(grp_id(50))
-          call ncdf_err(nf90_inq_grps(ncdf%id,grps,grp_id), &
-               "Inquiring file information "//ncdf)
+          call ncdf_err(nf90_inq_grps(this%id,grps,grp_id), &
+               "Inquiring file information "//this)
           if ( grps > size(grp_id) ) then
              deallocate(grp_id)
              allocate(grp_id(grps))
-             call ncdf_err(nf90_inq_grps(ncdf%id,grps,grp_id), &
-                  "Inquiring file information "//ncdf)
+             call ncdf_err(nf90_inq_grps(this%id,grps,grp_id), &
+                  "Inquiring file information "//this)
              deallocate(grp_id)
           end if
        else
@@ -538,7 +538,7 @@ contains
     character(len=*), intent(in)   :: name
     integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
-    type(hNCDF) :: ncdf
+    type(hNCDF) :: this
 
     ! A file-check has been requested...
     if ( present(exist) ) then
@@ -549,97 +549,97 @@ contains
     end if
 
     ! Open the file...
-    call ncdf_open(ncdf,name,parallel=.false.)
+    call ncdf_open(this,name,parallel=.false.)
     ! Do the inquiry...
-    call ncdf_inq_ncdf(ncdf,dims=dims,vars=vars,atts=atts,grps=grps,&
+    call ncdf_inq_ncdf(this,dims=dims,vars=vars,atts=atts,grps=grps,&
          format=format)
     ! Close the file
-    call ncdf_close(ncdf)
+    call ncdf_close(this)
 
   end subroutine ncdf_inq_name
     
 ! Simplify the addition of any dimension
-  subroutine ncdf_def_dim(ncdf,name,size)
-    type(hNCDF),     intent(inout) :: ncdf
+  subroutine ncdf_def_dim(this,name,size)
+    type(hNCDF),     intent(inout) :: this
     character(len=*), intent(in)   :: name
     integer, intent(in)            :: size
     integer :: id
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     ! ensure definition step 
     ! in case of netCDF-3 this will not change anything
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
 
-    call ncdf_err(nf90_def_dim(ncdf%id, name, size, id),&
-         "Defining dimension: "//trim(name)//" in file: "//ncdf)
+    call ncdf_err(nf90_def_dim(this%id, name, size, id),&
+         "Defining dimension: "//trim(name)//" in file: "//this)
 
   end subroutine ncdf_def_dim
 
 ! Simplify the renaming of any dimension
-  subroutine ncdf_rename_var(ncdf,old_name,new_name)
-    type(hNCDF),     intent(inout) :: ncdf
+  subroutine ncdf_rename_var(this,old_name,new_name)
+    type(hNCDF),     intent(inout) :: this
     character(len=*), intent(in)   :: old_name, new_name
     integer :: id
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
 
-    call ncdf_inq_var(ncdf,old_name,id=id)
+    call ncdf_inq_var(this,old_name,id=id)
 
-    call ncdf_err(nf90_rename_var(ncdf%id, id, new_name),&
+    call ncdf_err(nf90_rename_var(this%id, id, new_name),&
          "Renaming variable: "//trim(old_name)//" to "//&
-         trim(new_name)//" in file: "//ncdf)
+         trim(new_name)//" in file: "//this)
     
   end subroutine ncdf_rename_var
 
 ! Simplify the renaming of any dimension
-  subroutine ncdf_rename_dim(ncdf,old_name,new_name)
-    type(hNCDF),     intent(inout) :: ncdf
+  subroutine ncdf_rename_dim(this,old_name,new_name)
+    type(hNCDF),     intent(inout) :: this
     character(len=*), intent(in)   :: old_name, new_name
     integer :: id
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
 
-    call ncdf_inq_dim(ncdf,old_name,id=id)
+    call ncdf_inq_dim(this,old_name,id=id)
 
-    call ncdf_err(nf90_rename_dim(ncdf%id, id, new_name),&
+    call ncdf_err(nf90_rename_dim(this%id, id, new_name),&
          "Renaming dimension: "//trim(old_name)//" to "//&
-         trim(new_name)//" in file: "//ncdf)
+         trim(new_name)//" in file: "//this)
     
   end subroutine ncdf_rename_dim
 
-  subroutine ncdf_rename_att(ncdf,var,old_name,new_name)
-    type(hNCDF),     intent(inout) :: ncdf
+  subroutine ncdf_rename_att(this,var,old_name,new_name)
+    type(hNCDF),     intent(inout) :: this
     character(len=*), intent(in)   :: var, old_name, new_name
     integer :: id
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
 
-    call ncdf_inq_var(ncdf,var,id=id)
+    call ncdf_inq_var(this,var,id=id)
 
-    call ncdf_err(nf90_rename_att(ncdf%id, id, old_name, new_name),&
+    call ncdf_err(nf90_rename_att(this%id, id, old_name, new_name),&
          "Renaming variable ("//trim(var)//") attribute: "//trim(old_name)&
-         //" to "//trim(new_name)//" in file: "//ncdf)
+         //" to "//trim(new_name)//" in file: "//this)
     
   end subroutine ncdf_rename_att
 
-  subroutine ncdf_rename_gatt(ncdf,old_name,new_name)
-    type(hNCDF),     intent(inout) :: ncdf
+  subroutine ncdf_rename_gatt(this,old_name,new_name)
+    type(hNCDF),     intent(inout) :: this
     character(len=*), intent(in)   :: old_name, new_name
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
 
-    call ncdf_err(nf90_rename_att(ncdf%id, NF90_GLOBAL, old_name, new_name),&
+    call ncdf_err(nf90_rename_att(this%id, NF90_GLOBAL, old_name, new_name),&
          "Renaming global attribute: "//trim(old_name)&
-         //" to "//trim(new_name)//" in file: "//ncdf)
+         //" to "//trim(new_name)//" in file: "//this)
     
   end subroutine ncdf_rename_gatt
 
@@ -660,15 +660,11 @@ contains
     integer,          intent(in),    optional :: compress_lvl
     logical,          intent(in),    optional :: shuffle
     integer,          intent(in),    optional :: access
-    type(dict) :: att
-    type(var)  :: at_var
 #ifdef NCDF_4
     integer :: loc_compress_lvl
     logical :: lshuffle
 #endif
     integer :: iret, i, ldims(size(dims))
-    character(len=100) :: key
-    character(len=NF90_MAX_NAME) :: tmp
 
     call ncdf_redef(this)
     do i = 1 , size(dims)
@@ -696,36 +692,7 @@ contains
     call ncdf_err(iret,"Defining variable: "//trim(name)//" in file: "//this)
 
     if ( present(atts) ) then
-       att = .first. atts
-       att_loop: do 
-          if ( .empty. att ) exit att_loop
-          key = .key. att
-          if ( key == "ATT_DELETE" ) then
-             att = .next. att
-             cycle
-          end if
-          call associate(at_var,att)
-          ! currently we only allow the string to be performed
-          if ( at_var%t /= "V0" ) then
-             att = .next. att
-             cycle
-          end if
-          tmp = at_var%v0
-             
-          iret = nf90_put_att(this%id, id, trim(key), tmp)
-
-          call ncdf_err(iret, &
-               "Saving attribute: "//trim(key)// &
-               " to "//trim(name)//" in file: "//this)
-          att = .next. att
-       end do att_loop
-       
-       ! If the user adds this key, the dictionary will be deleted
-       ! after usage...
-       if ( "ATT_DELETE" .in. atts ) then
-          call delete(atts)
-       end if
-       
+       call put_att_id(this,id,atts)
     end if
 
     if ( present(access) ) then
@@ -862,9 +829,9 @@ contains
 
   end subroutine ncdf_default
 
-  subroutine ncdf_inq_var_def(ncdf,name,exist,id,size,atts)
+  subroutine ncdf_inq_var_def(this,name,exist,id,size,atts)
     use dictionary
-    type(hNCDF),      intent(inout) :: ncdf
+    type(hNCDF),      intent(inout) :: this
     character(len=*), intent(in)    :: name
     logical, optional, intent(out)  :: exist
     integer, optional, intent(out)  :: id
@@ -874,24 +841,18 @@ contains
     integer :: lid, nids, i
     integer :: ldids(10) ! In case the user only wishes to read a sub-part of the size
     character(len=50) :: dim
-    integer :: nAtts, xtype, att_len
-    character(len=500) :: att_name, att_char
-    real(sp), allocatable :: a_sp(:)
-    real(dp), allocatable :: a_dp(:)
-    integer(ih), allocatable :: a_ih(:)
-    integer(is), allocatable :: a_is(:)
     logical :: lexist
     
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     ! Figure out if the dimension exists
-    iret = nf90_inq_varid(ncdf%id, trim(name), lid)
+    iret = nf90_inq_varid(this%id, trim(name), lid)
     ! The variable must exist
     lexist = iret == NF90_NOERR
     if ( present(exist) ) then
        exist = lexist
     else if ( .not. lexist ) then
-       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//ncdf)
+       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//this)
     end if
     
     ! If there is nothing to inquire: return
@@ -901,68 +862,24 @@ contains
 
     ! If the user has requested information about the size of the variable...
     if ( present(size) ) then
-       call ncdf_err(nf90_inquire_variable(ncdf%id, lid, ndims=nids, dimids=ldids))
+       call ncdf_err(nf90_inquire_variable(this%id, lid, ndims=nids, dimids=ldids))
        do i = 1 , min(nids,ubound(size,1))
-          call ncdf_err(nf90_inquire_dimension(ncdf%id,ldids(i),name=dim), &
-               "Retrieving dimension name in inq_var for file: "//ncdf)
+          call ncdf_err(nf90_inquire_dimension(this%id,ldids(i),name=dim), &
+               "Retrieving dimension name in inq_var for file: "//this)
           ! Save the dimension size in array "size"
-          call ncdf_inq_dim(ncdf,trim(dim),len=size(i))
+          call ncdf_inq_dim(this,trim(dim),len=size(i))
        end do
     end if
 
     ! The user has requested information about the attributes associated...
     if ( present(atts) ) then
-       call ncdf_err(nf90_inquire_variable(ncdf%id, lid, nAtts=nAtts), &
-            "Retrieving number of associated attributes in inq_var for file: "//ncdf)
-       do i = 1 , nAtts
-          att_name = " "
-
-          call ncdf_err(nf90_inq_attname(ncdf%id, lid, i, att_name), &
-               "Retrieving the attribute name for file: "//ncdf)
-
-          ! retrieve the attribute length
-          call ncdf_err(nf90_inquire_attribute(ncdf%id,lid,att_name, &
-               xtype=xtype,len=att_len),'Retriving inquire_attribute: '//ncdf)
-          
-          select case (xtype)
-          case ( NF90_CHAR ) 
-             att_char = " "
-             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), att_char), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.trim(att_char))
-          case ( NF90_SHORT )
-             allocate(a_ih(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_ih), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_ih)
-             deallocate(a_ih)
-          case ( NF90_INT )
-             allocate(a_is(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_is), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_is)
-             deallocate(a_is)
-          case ( NF90_FLOAT )
-             allocate(a_sp(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_sp), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_sp)
-             deallocate(a_sp)
-          case ( NF90_DOUBLE )
-             allocate(a_dp(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_dp), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_dp)
-             deallocate(a_dp)
-          end select
-          
-       end do
+       call get_att_id(this,lid,atts=atts)
     end if
 
   end subroutine ncdf_inq_var_def
 
-  subroutine ncdf_inq_dim(ncdf,name,exist,id,len)
-    type(hNCDF),      intent(inout) :: ncdf
+  subroutine ncdf_inq_dim(this,name,exist,id,len)
+    type(hNCDF),      intent(inout) :: this
     character(len=*), intent(in)    :: name
     logical, optional, intent(out)  :: exist
     integer, optional, intent(out)  :: id
@@ -971,15 +888,15 @@ contains
     integer :: lid
     logical :: lexist
     
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     ! Figure out if the dimension exists
-    iret = nf90_inq_dimid(ncdf%id, trim(name), lid)
+    iret = nf90_inq_dimid(this%id, trim(name), lid)
     lexist = iret == NF90_NOERR
     if ( present(exist) ) then
        exist = lexist
     else if ( .not. lexist ) then
-       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//ncdf)
+       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//this)
     end if
 
     ! If there is nothing to inquire: return
@@ -987,206 +904,267 @@ contains
 
     if ( present(id) ) id = lid
     if ( present(len) ) then
-       call ncdf_err(nf90_inquire_dimension(ncdf%id, lid, len=len), &
-            "Retrieving length of dimension: "//trim(name)//" in file: "//ncdf)
+       call ncdf_err(nf90_inquire_dimension(this%id, lid, len=len), &
+            "Retrieving length of dimension: "//trim(name)//" in file: "//this)
     end if
 
   end subroutine ncdf_inq_dim
 
-  subroutine ncdf_inq_gatt(ncdf,name,exist,att,atts)
+  subroutine ncdf_inq_gatt(this,name,exist,len,xtype)
     use dictionary
     use variable
-    type(hNCDF),      intent(inout) :: ncdf
+    type(hNCDF),      intent(inout) :: this
     character(len=*), optional, intent(in)    :: name
     logical, optional, intent(out)  :: exist
-    type(var), optional, intent(inout) :: att
-    type(dict), optional, intent(inout) :: atts
+    integer, optional, intent(out)  :: len, xtype
+
     integer :: iret ! We need to retain any error message...
     logical :: lexist
-    integer, parameter :: ID = NF90_GLOBAL
-    integer :: i, xtype, att_len, nAtts
+
+    if ( .not. ncdf_participate(this) ) return
+
+    ! Figure out if the dimension exists
+    iret = nf90_inquire_attribute(this%id, NF90_GLOBAL, trim(name), &
+         len = len, xtype = xtype)
+    lexist = iret == NF90_NOERR
+    if ( present(exist) ) then
+       exist = lexist
+    else if ( .not. lexist ) then
+       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//this)
+    end if
+
+  end subroutine ncdf_inq_gatt
+
+  subroutine ncdf_inq_att(this,var,name,exist,len,xtype)
+    type(hNCDF),      intent(inout) :: this
+    character(len=*), intent(in)    :: var
+    character(len=*), intent(in)    :: name
+    logical, optional, intent(out)  :: exist
+    integer, optional, intent(out)  :: len, xtype
+
+    integer :: iret ! We need to retain any error message...
+    integer :: id
+    logical :: lexist
+    
+    if ( .not. ncdf_participate(this) ) return
+
+    call ncdf_inq_var(this,var,id=id)
+    ! Figure out if the dimension exists
+    iret = nf90_inquire_attribute(this%id, id, trim(name), &
+         len = len, xtype = xtype)
+    lexist = iret == NF90_NOERR
+    if ( present(exist) ) then
+       exist = lexist
+    else if ( .not. lexist ) then
+       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//this)
+    end if
+
+  end subroutine ncdf_inq_att
+
+  subroutine put_gatt(this,atts)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    type(dict),  intent(inout) :: atts
+    if ( .not. ncdf_participate(this) ) return
+    call put_att_id(this,NF90_GLOBAL,atts)
+  end subroutine put_gatt
+  
+  subroutine get_gatt(this,atts)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    type(dict),  intent(inout) :: atts
+    if ( .not. ncdf_participate(this) ) return
+    call get_att_id(this,NF90_GLOBAL,atts)
+  end subroutine get_gatt
+
+  subroutine put_att(this,name,atts)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    character(len=*), intent(in) :: name
+    type(dict),  intent(inout) :: atts
+    integer :: id
+    if ( .not. ncdf_participate(this) ) return
+    call ncdf_inq_var(this,name,id=id)
+    call put_att_id(this,id,atts)
+  end subroutine put_att
+  
+  subroutine get_att(this,name,atts)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    character(len=*), intent(in) :: name
+    type(dict),  intent(inout) :: atts
+    integer :: id
+    if ( .not. ncdf_participate(this) ) return
+    call ncdf_inq_var(this,name,id=id)
+    call get_att_id(this,id,atts)
+  end subroutine get_att
+
+  subroutine put_att_id(this,id,atts)
+    use iso_var_str
+    use dictionary
+    use variable
+    type(hNCDF), intent(inout) :: this
+    integer, intent(in) :: ID
+    type(dict),  intent(inout) :: atts
+    type(dict) :: att
+    type(var)  :: at_var
+    integer :: iret
+    character(len=NF90_MAX_NAME) :: tmp, key
+
+    att = .first. atts
+    att_loop: do 
+       if ( .empty. att ) exit att_loop
+       key = .key. att
+       if ( key == "ATT_DELETE" ) then
+          att = .next. att
+          cycle
+       end if
+       call associate(at_var,att)
+       
+       select case ( at_var%t )
+       case ( 'V0' )
+          tmp = at_var%v0
+          iret = nf90_put_att(this%id, id, trim(key), tmp)
+       case ( 'h0' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%h0)
+       case ( 'h1' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%h1)
+       case ( 'i0' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%i0)
+       case ( 'i1' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%i1)
+       case ( 's0' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%s0)
+       case ( 's1' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%s1)
+       case ( 'd0' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%d0)
+       case ( 'd1' )
+          iret = nf90_put_att(this%id, id, trim(key), at_var%d1)
+       case default
+          iret = -100
+       end select
+       call ncdf_err(iret, &
+            "Saving attribute: "//trim(key)// &
+            " in file: "//this)
+       att = .next. att
+    end do att_loop
+       
+    ! If the user adds this key, the dictionary will be deleted
+    ! after usage...
+    if ( "ATT_DELETE" .in. atts ) then
+       call delete(atts)
+    end if
+    
+  end subroutine put_att_id
+
+  subroutine get_att_id(this,id,atts)
+    use iso_var_str
+    use dictionary
+    use variable
+    type(hNCDF), intent(inout) :: this
+    integer, intent(in) :: ID
+    type(dict),  intent(inout) :: atts
+    integer :: i, nAtts, xtype, att_len
     character(len=500) :: att_name, att_char
     real(sp), allocatable :: a_sp(:)
     real(dp), allocatable :: a_dp(:)
     integer(ih), allocatable :: a_ih(:)
     integer(is), allocatable :: a_is(:)
-
-    if ( .not. ncdf_participate(ncdf) ) return
-
-    ! if name is not provided, then the user
-    ! must ask for all attributes
-    if ( .not. present(name) ) then
-       if ( .not. present(atts) ) then
-          call ncdf_err(-100,"Programming error! inq_gatt")
-       end if
-
-       call ncdf_err(nf90_inquire_variable(ncdf%id, ID, nAtts=nAtts), &
-            "Retrieving number of associated attributes in inq_var for file: "//ncdf)
-
-       do i = 1 , nAtts
-          att_name = " "
-
-          call ncdf_err(nf90_inq_attname(ncdf%id, ID, i, att_name), &
-               "Retrieving the attribute name for file: "//ncdf)
-
-          ! retrieve the attribute length
-          call ncdf_err(nf90_inquire_attribute(ncdf%id,ID,att_name, &
-               xtype=xtype,len=att_len), 'Retrieving inquire_attribute: '//ncdf)
-          
-          select case ( xtype )
-          case ( NF90_CHAR ) 
-             att_char = " "
-             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), att_char), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.trim(att_char))
-          case ( NF90_SHORT )
-             allocate(a_ih(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_ih), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_ih)
-             deallocate(a_ih)
-          case ( NF90_INT )
-             allocate(a_is(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_is), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_is)
-             deallocate(a_is)
-          case ( NF90_FLOAT )
-             allocate(a_sp(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_sp), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_sp)
-             deallocate(a_sp)
-          case ( NF90_DOUBLE )
-             allocate(a_dp(att_len))
-             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_dp), &
-                  "Retrieving the attribute value for file: "//ncdf)
-             atts = atts//(trim(att_name).KV.a_dp)
-             deallocate(a_dp)
-          end select
-       
-       end do
-       
-       return
-    end if
-
-    ! Figure out if the dimension exists
-    iret = nf90_inquire_attribute(ncdf%id, ID, trim(name))
-    lexist = iret == NF90_NOERR
-    if ( present(exist) ) then
-       exist = lexist
-    else if ( .not. lexist ) then
-       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//ncdf)
-    end if
-
-    ! we do not want to do anything but retrieve the attribute here
-    if ( .not. present(att) ) return
-
-    ! retrieve the attribute length
-    call ncdf_err(nf90_inquire_attribute(ncdf%id,ID,att_name, &
-         xtype=xtype,len=att_len),'Retrieving information: '//ncdf)
-          
-    select case ( xtype )
-    case ( NF90_CHAR ) 
-       att_char = ' '
-       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), att_char), &
-            "Retrieving the attribute value for file: "//ncdf)
-       call assign(att,trim(att_char))
-    case ( NF90_SHORT )
-       allocate(a_ih(att_len))
-       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_ih), &
-            "Retrieving the attribute value for file: "//ncdf)
-       call assign(att,a_ih)
-       deallocate(a_ih)
-    case ( NF90_INT )
-       allocate(a_is(att_len))
-       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_is), &
-            "Retrieving the attribute value for file: "//ncdf)
-       call assign(att,a_is)
-       deallocate(a_is)
-    case ( NF90_FLOAT )
-       allocate(a_sp(att_len))
-       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_sp), &
-            "Retrieving the attribute value for file: "//ncdf)
-       call assign(att,a_sp)
-       deallocate(a_sp)
-    case ( NF90_DOUBLE )
-       allocate(a_dp(att_len))
-       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_dp), &
-            "Retrieving the attribute value for file: "//ncdf)
-       call assign(att,a_dp)
-       deallocate(a_dp)
-    end select
     
-  end subroutine ncdf_inq_gatt
+    call ncdf_err(nf90_inquire_variable(this%id, id, nAtts=nAtts), &
+         "Retrieving number of associated attributes in inq_var for file: "//this)
 
-  subroutine ncdf_inq_att(ncdf,var,name,exist)
-    type(hNCDF),      intent(inout) :: ncdf
-    character(len=*), intent(in)    :: var
-    character(len=*), intent(in)    :: name
-    logical, optional, intent(out)  :: exist
-    integer :: iret ! We need to retain any error message...
-    integer :: id
-    logical :: lexist
+    do i = 1 , nAtts
+
+       att_name = ' '
+       call ncdf_err(nf90_inq_attname(this%id, id, i, att_name), &
+            "Retrieving the attribute name for file: "//this)
+       
+       ! retrieve the attribute length and data-type
+       call ncdf_err(nf90_inquire_attribute(this%id,id,att_name, &
+            xtype=xtype,len=att_len),'Retriving inquire_attribute: '//this)
+       
+       select case ( xtype )
+       case ( NF90_CHAR ) 
+          att_char = ' '
+          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), att_char), &
+               "Retrieving the attribute value for file: "//this)
+          atts = atts//(trim(att_name).KV.trim(att_char))
+       case ( NF90_SHORT )
+          allocate(a_ih(att_len))
+          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_ih), &
+               "Retrieving the attribute value for file: "//this)
+          atts = atts//(trim(att_name).KV.a_ih)
+          deallocate(a_ih)
+       case ( NF90_INT )
+          allocate(a_is(att_len))
+          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_is), &
+               "Retrieving the attribute value for file: "//this)
+          atts = atts//(trim(att_name).KV.a_is)
+          deallocate(a_is)
+       case ( NF90_FLOAT )
+          allocate(a_sp(att_len))
+          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_sp), &
+               "Retrieving the attribute value for file: "//this)
+          atts = atts//(trim(att_name).KV.a_sp)
+          deallocate(a_sp)
+       case ( NF90_DOUBLE )
+          allocate(a_dp(att_len))
+          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_dp), &
+               "Retrieving the attribute value for file: "//this)
+          atts = atts//(trim(att_name).KV.a_dp)
+          deallocate(a_dp)
+       end select
+          
+    end do
     
-    if ( .not. ncdf_participate(ncdf) ) return
-
-    call ncdf_inq_var(ncdf,var,id=id)
-    ! Figure out if the dimension exists
-    iret = nf90_inquire_attribute(ncdf%id, id, trim(name))
-    lexist = iret == NF90_NOERR
-    if ( present(exist) ) then
-       exist = lexist
-    else if ( .not. lexist ) then
-       call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//ncdf)
-    end if
-
-  end subroutine ncdf_inq_att
+  end subroutine get_att_id
 
   ! Delete attributes
-  subroutine ncdf_del_att(ncdf,var,name)
-    type(hNCDF),      intent(inout) :: ncdf
+  subroutine ncdf_del_att(this,var,name)
+    type(hNCDF),      intent(inout) :: this
     character(len=*), intent(in)    :: var
     character(len=*), intent(in)    :: name
     integer :: iret ! We need to retain any error message...
     integer :: id
 
-    call ncdf_redef(ncdf)    
+    call ncdf_redef(this)    
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
-    call ncdf_inq_var(ncdf,var,id=id)
+    call ncdf_inq_var(this,var,id=id)
     ! Figure out if the dimension exists
-    iret = nf90_inquire_attribute(ncdf%id, id, trim(name))
+    iret = nf90_inquire_attribute(this%id, id, trim(name))
     if ( iret == NF90_NOERR ) then
-       call ncdf_err(nf90_del_att(ncdf%id, id, trim(name)), &
+       call ncdf_err(nf90_del_att(this%id, id, trim(name)), &
             "Deleting attribute: "//trim(name)//" for variable "//&
-            trim(var)//" in file: "//ncdf)
+            trim(var)//" in file: "//this)
     end if
 
   end subroutine ncdf_del_att
 
-  subroutine ncdf_del_gatt(ncdf,name)
-    type(hNCDF),      intent(inout) :: ncdf
+  subroutine ncdf_del_gatt(this,name)
+    type(hNCDF),      intent(inout) :: this
     character(len=*), intent(in)    :: name
     integer :: iret ! We need to retain any error message...
     integer :: id
 
-    call ncdf_redef(ncdf)
+    call ncdf_redef(this)
     
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
     
     ! Figure out if the dimension exists
-    iret = nf90_inquire_attribute(ncdf%id, NF90_GLOBAL, trim(name))
+    iret = nf90_inquire_attribute(this%id, NF90_GLOBAL, trim(name))
     if ( iret == NF90_NOERR ) then
-       call ncdf_err(nf90_del_att(ncdf%id, NF90_GLOBAL, trim(name)), &
-            "Deleting global attribute: "//trim(name)//" in file: "//ncdf)
+       call ncdf_err(nf90_del_att(this%id, NF90_GLOBAL, trim(name)), &
+            "Deleting global attribute: "//trim(name)//" in file: "//this)
     end if
 
   end subroutine ncdf_del_gatt
 
-  subroutine ncdf_fill(ncdf,fill,old_fill)
-    type(hNCDF),       intent(inout) :: ncdf
+  subroutine ncdf_fill(this,fill,old_fill)
+    type(hNCDF),       intent(inout) :: this
     integer, optional, intent(in)    :: fill
     integer, optional, intent(out)   :: old_fill
     integer :: lf, lof
@@ -1195,14 +1173,14 @@ contains
     lf = NF90_NOFILL
     if ( present(fill) ) lf = fill
 
-    call ncdf_err(nf90_set_fill(ncdf%id,lf, lof), &
-         "Setting fill mode in file: "//ncdf)
+    call ncdf_err(nf90_set_fill(this%id,lf, lof), &
+         "Setting fill mode in file: "//this)
 
     if ( present(old_fill) ) old_fill = lof
 
     if ( .not. present(fill) ) &
-         call ncdf_err(nf90_set_fill(ncdf%id,lof, lf), &
-         "Re-setting fill mode in file: "//ncdf)
+         call ncdf_err(nf90_set_fill(this%id,lof, lf), &
+         "Re-setting fill mode in file: "//this)
 
   end subroutine ncdf_fill
 
@@ -1210,34 +1188,34 @@ contains
 ! Use the netcdf_wrap.sh script to generate the needed code...
 #include "ncdf_funcs.inc"
 
-  subroutine ncdf_enddef(ncdf)
-    type(hNCDF), intent(inout) :: ncdf
+  subroutine ncdf_enddef(this)
+    type(hNCDF), intent(inout) :: this
     ! A NetCDF4 file, (does not need define/data mode)
-    if ( ncdf%define < 0 ) return
+    if ( this%define < 0 ) return
     ! Already in data mode:
-    if ( ncdf%define == 1 ) return
-    ncdf%define = 1
-    if ( .not. ncdf_participate(ncdf) ) return
-    call ncdf_err(nf90_enddef(ncdf%id),"End definition segment of file: "//ncdf)
+    if ( this%define == 1 ) return
+    this%define = 1
+    if ( .not. ncdf_participate(this) ) return
+    call ncdf_err(nf90_enddef(this%id),"End definition segment of file: "//this)
   end subroutine ncdf_enddef
 
-  subroutine ncdf_sync(ncdf)
-    type(hNCDF), intent(in) :: ncdf
-    if ( .not. ncdf_participate(ncdf) ) return
+  subroutine ncdf_sync(this)
+    type(hNCDF), intent(in) :: this
+    if ( .not. ncdf_participate(this) ) return
     ! We need (must) not sync when in definition mode...
-    if ( ncdf%define == 0 ) return
-    call ncdf_err(nf90_sync(ncdf%id),"File syncronization for file"//ncdf)
+    if ( this%define == 0 ) return
+    call ncdf_err(nf90_sync(this%id),"File syncronization for file"//this)
   end subroutine ncdf_sync
 
-  subroutine ncdf_redef(ncdf)
-    type(hNCDF), intent(inout) :: ncdf
+  subroutine ncdf_redef(this)
+    type(hNCDF), intent(inout) :: this
     ! A NetCDF4 file, (does not need define/data mode)
-    if ( ncdf%define < 0 ) return
+    if ( this%define < 0 ) return
     ! Already in define mode:
-    if ( ncdf%define == 0 ) return
-    ncdf%define = 0
-    if ( .not. ncdf_participate(ncdf) ) return
-    call ncdf_err(nf90_redef(ncdf%id),"Redef definition segment in file: "//ncdf)
+    if ( this%define == 0 ) return
+    this%define = 0
+    if ( .not. ncdf_participate(this) ) return
+    call ncdf_err(nf90_redef(this%id),"Redef definition segment in file: "//this)
   end subroutine ncdf_redef
 
 ! ################################################################
@@ -1276,20 +1254,20 @@ contains
 ! ################################################################
 
   ! Create groups in a NetCDF4 file
-  subroutine ncdf_def_grp(ncdf,name,grp)
-    type(hNCDF), intent(in out) :: ncdf
+  subroutine ncdf_def_grp(this,name,grp)
+    type(hNCDF), intent(in out) :: this
     character(len=*), intent(in) :: name
     type(hNCDF), intent(out) :: grp
     
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     ! Copy the information regarding the parent ncdf
-    call ncdf_copy(ncdf,grp)
+    call ncdf_copy(this,grp)
     ! Save the group name... (we save it with hiercharal notice /"grp1"/"grp2")
     grp%grp = trim(grp%grp)//"/"//trim(name)
     ! Create the group and return
-    call ncdf_err(nf90_def_grp(ncdf%id,name,grp%id), &
-         "Creating group "//trim(name)//" in file "//ncdf)
+    call ncdf_err(nf90_def_grp(this%id,name,grp%id), &
+         "Creating group "//trim(name)//" in file "//this)
 
   end subroutine ncdf_def_grp
 
@@ -1299,29 +1277,29 @@ contains
 
 
 ! # Returns a logical determining the participation of the node
-  function ncdf_participate(ncdf) result(participate)
-    type(hNCDF), intent(in) :: ncdf
+  function ncdf_participate(this) result(participate)
+    type(hNCDF), intent(in) :: this
     logical :: participate
     ! In all cases this should be the correct way to do it
     ! If wire is attached, the correct parallel setting is created
     ! If a communicator is attached the parallel flag is also set
-    participate = ncdf%parallel .or. IONode
+    participate = this%parallel .or. IONode
   end function ncdf_participate
 
 
 ! These routines or functions are global available even if the NetCDF is not used...
 
 ! functions for concatenating strings and ncdf handles.
-  character(len=300) function cat_char_ncdf(char,ncdf)
+  character(len=300) function cat_char_ncdf(char,this)
     character(len=*), intent(in) :: char
-    type(hNCDF), intent(in) :: ncdf
-    cat_char_ncdf = char//trim(ncdf%name)
+    type(hNCDF), intent(in) :: this
+    cat_char_ncdf = char//trim(this%name)
   end function cat_char_ncdf
 
-  character(len=300) function cat_ncdf_char(ncdf,char)
-    type(hNCDF), intent(in) :: ncdf
+  character(len=300) function cat_ncdf_char(this,char)
+    type(hNCDF), intent(in) :: this
     character(len=*), intent(in) :: char
-    cat_ncdf_char = trim(ncdf%name)//char
+    cat_ncdf_char = trim(this%name)//char
   end function cat_ncdf_char
 
   subroutine ncdf_IONode(io_Node)
@@ -1329,47 +1307,47 @@ contains
     IONode = IO_Node
   end subroutine ncdf_IONode
 
-  subroutine ncdf_print(ncdf)
+  subroutine ncdf_print(this)
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
-    type(hNCDF), intent(in) :: ncdf
+    type(hNCDF), intent(in) :: this
     integer :: ndims,nvars,ngatts,file_format,ngrps
     integer :: Node,Nodes
 #ifdef NCDF_PARALLEL
     integer :: MPIerror
 #endif
 
-    if ( .not. ncdf_participate(ncdf) ) return
+    if ( .not. ncdf_participate(this) ) return
 
     Node = 0
     Nodes = 1
 #ifdef NCDF_PARALLEL
-    if ( ncdf%comm >= 0 ) then
-       call MPI_Comm_rank(ncdf%comm,Node,MPIerror)
-       call MPI_Comm_size(ncdf%comm,Nodes,MPIerror)
+    if ( this%comm >= 0 ) then
+       call MPI_Comm_rank(this%comm,Node,MPIerror)
+       call MPI_Comm_size(this%comm,Nodes,MPIerror)
     end if
 #endif
     ! This will fail if it is not the 0th Node in the communicator
     ! For instance a subgroup in the Comm_World...
     if ( Node == 0 ) then
-       write(*,"(a20,a)") "NetCDF filename:    ",trim(ncdf%name)
-       if ( len_trim(ncdf%grp) /= 0 ) then
-          write(*,"(a20,a)") "NetCDF group name:  ",trim(ncdf%grp)
+       write(*,"(a20,a)") "NetCDF filename:    ",trim(this%name)
+       if ( len_trim(this%grp) /= 0 ) then
+          write(*,"(a20,a)") "NetCDF group name:  ",trim(this%grp)
        end if
-       write(*,"(a20,i7)") "NetCDF ID:          ",ncdf%id
-       if ( ncdf%parallel ) then
+       write(*,"(a20,i7)") "NetCDF ID:          ",this%id
+       if ( this%parallel ) then
           write(*,"(a20,a)") "Parallel access:    ","True"
           write(*,"(a20,tr1,i0)") "Parallel processors:",Nodes
        else
           write(*,"(a20,a)") "Parallel access:    ","False"
        end if
-       if ( ncdf%define == 0 ) then
+       if ( this%define == 0 ) then
           write(*,"(a20,a)") "In define-mode:     ","True"
-       else if ( ncdf%define == 1 ) then
+       else if ( this%define == 1 ) then
           write(*,"(a20,a)") "In define-mode:     ","False"
        end if
-       call ncdf_inq(ncdf, dims=ndims, vars=nvars, atts=ngatts, &
+       call ncdf_inq(this, dims=ndims, vars=nvars, atts=ngatts, &
             grps=ngrps, format=file_format)
        select case ( file_format ) 
        case ( NF90_FORMAT_CLASSIC )
@@ -1378,10 +1356,10 @@ contains
           write(*,"(a20,a)") "File format:        ","Classic 64Bit"
        case ( NF90_FORMAT_NETCDF4 )
           write(*,"(a20,a)") "File format:        ","NetCDF4"
-          write(*,"(a20,i7)")"Default compression:",ncdf%comp_lvl
+          write(*,"(a20,i7)")"Default compression:",this%comp_lvl
        case ( NF90_FORMAT_NETCDF4_CLASSIC )
           write(*,"(a20,a)") "File format:        ","NetCDF4 Classic format"
-          write(*,"(a22,i7)")"Default compression:  ",ncdf%comp_lvl
+          write(*,"(a22,i7)")"Default compression:  ",this%comp_lvl
        case default
           write(*,"(a20,a)") "File format:        ","Could not be determined"
        end select
@@ -1391,28 +1369,28 @@ contains
        if ( ngrps >= 0 ) then
        write(*,"(a20,i7)") "Number of groups:      ",ngrps
        end if
-       if ( iand(NF90_WRITE,ncdf%mode) == NF90_WRITE ) &
+       if ( iand(NF90_WRITE,this%mode) == NF90_WRITE ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_WRITE"
-       if ( iand(NF90_NOCLOBBER,ncdf%mode) == NF90_NOCLOBBER ) &
+       if ( iand(NF90_NOCLOBBER,this%mode) == NF90_NOCLOBBER ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOCLOBBER"
-       if ( iand(NF90_NOFILL,ncdf%mode) == NF90_NOFILL ) &
+       if ( iand(NF90_NOFILL,this%mode) == NF90_NOFILL ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOFILL"
-       if ( iand(NF90_64BIT_OFFSET,ncdf%mode) == NF90_64BIT_OFFSET ) &
+       if ( iand(NF90_64BIT_OFFSET,this%mode) == NF90_64BIT_OFFSET ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_64BIT_OFFSET"
-       if ( iand(NF90_LOCK,ncdf%mode) == NF90_LOCK ) &
+       if ( iand(NF90_LOCK,this%mode) == NF90_LOCK ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_LOCK"
-       if ( iand(NF90_SHARE,ncdf%mode) == NF90_SHARE ) &
+       if ( iand(NF90_SHARE,this%mode) == NF90_SHARE ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_SHARE"
-       if ( iand(NF90_NETCDF4,ncdf%mode) == NF90_NETCDF4 ) &
+       if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_NETCDF4"
-       if ( iand(NF90_CLASSIC_MODEL,ncdf%mode) == NF90_CLASSIC_MODEL ) &
+       if ( iand(NF90_CLASSIC_MODEL,this%mode) == NF90_CLASSIC_MODEL ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_CLASSIC_MODEL"
 #ifdef NCDF_PARALLEL
-       if ( iand(NF90_MPIIO,ncdf%mode) == NF90_MPIIO ) &
+       if ( iand(NF90_MPIIO,this%mode) == NF90_MPIIO ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_MPIIO"
-       if ( iand(NF90_MPIPOSIX,ncdf%mode) == NF90_MPIPOSIX ) &
+       if ( iand(NF90_MPIPOSIX,this%mode) == NF90_MPIPOSIX ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_MPIPOSIX"
-       if ( iand(NF90_PNETCDF,ncdf%mode) == NF90_PNETCDF ) &
+       if ( iand(NF90_PNETCDF,this%mode) == NF90_PNETCDF ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_PNETCDF"
 #endif
     end if
