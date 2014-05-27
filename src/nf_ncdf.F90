@@ -874,8 +874,12 @@ contains
     integer :: lid, nids, i
     integer :: ldids(10) ! In case the user only wishes to read a sub-part of the size
     character(len=50) :: dim
-    integer :: nAtts
-    character(len=500) :: att_name,att
+    integer :: nAtts, xtype, att_len
+    character(len=500) :: att_name, att_char
+    real(sp), allocatable :: a_sp(:)
+    real(dp), allocatable :: a_dp(:)
+    integer(ih), allocatable :: a_ih(:)
+    integer(is), allocatable :: a_is(:)
     logical :: lexist
     
     if ( .not. ncdf_participate(ncdf) ) return
@@ -912,16 +916,46 @@ contains
             "Retrieving number of associated attributes in inq_var for file: "//ncdf)
        do i = 1 , nAtts
           att_name = " "
-          att      = " "
+
           call ncdf_err(nf90_inq_attname(ncdf%id, lid, i, att_name), &
                "Retrieving the attribute name for file: "//ncdf)
 
-          ! TODO
-          ! For the moment we can only retrieve attributes of characters...
-          ! This should be leveraged as the dictionary can handle arbitrary values...
-          call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), att), &
-               "Retrieving the attribute value for file: "//ncdf)
-          atts = atts//(trim(att_name).KV.trim(att))
+          ! retrieve the attribute length
+          call ncdf_err(nf90_inquire_attribute(ncdf%id,lid,att_name, &
+               xtype=xtype,len=att_len),'Retriving inquire_attribute: '//ncdf)
+          
+          select case (xtype)
+          case ( NF90_CHAR ) 
+             att_char = " "
+             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), att_char), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.trim(att_char))
+          case ( NF90_SHORT )
+             allocate(a_ih(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_ih), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_ih)
+             deallocate(a_ih)
+          case ( NF90_INT )
+             allocate(a_is(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_is), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_is)
+             deallocate(a_is)
+          case ( NF90_FLOAT )
+             allocate(a_sp(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_sp), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_sp)
+             deallocate(a_sp)
+          case ( NF90_DOUBLE )
+             allocate(a_dp(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, lid, trim(att_name), a_dp), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_dp)
+             deallocate(a_dp)
+          end select
+          
        end do
     end if
 
@@ -959,23 +993,131 @@ contains
 
   end subroutine ncdf_inq_dim
 
-  subroutine ncdf_inq_gatt(ncdf,name,exist)
+  subroutine ncdf_inq_gatt(ncdf,name,exist,att,atts)
+    use dictionary
+    use variable
     type(hNCDF),      intent(inout) :: ncdf
-    character(len=*), intent(in)    :: name
+    character(len=*), optional, intent(in)    :: name
     logical, optional, intent(out)  :: exist
+    type(var), optional, intent(inout) :: att
+    type(dict), optional, intent(inout) :: atts
     integer :: iret ! We need to retain any error message...
     logical :: lexist
-    
+    integer, parameter :: ID = NF90_GLOBAL
+    integer :: i, xtype, att_len, nAtts
+    character(len=500) :: att_name, att_char
+    real(sp), allocatable :: a_sp(:)
+    real(dp), allocatable :: a_dp(:)
+    integer(ih), allocatable :: a_ih(:)
+    integer(is), allocatable :: a_is(:)
+
     if ( .not. ncdf_participate(ncdf) ) return
 
+    ! if name is not provided, then the user
+    ! must ask for all attributes
+    if ( .not. present(name) ) then
+       if ( .not. present(atts) ) then
+          call ncdf_err(-100,"Programming error! inq_gatt")
+       end if
+
+       call ncdf_err(nf90_inquire_variable(ncdf%id, ID, nAtts=nAtts), &
+            "Retrieving number of associated attributes in inq_var for file: "//ncdf)
+
+       do i = 1 , nAtts
+          att_name = " "
+
+          call ncdf_err(nf90_inq_attname(ncdf%id, ID, i, att_name), &
+               "Retrieving the attribute name for file: "//ncdf)
+
+          ! retrieve the attribute length
+          call ncdf_err(nf90_inquire_attribute(ncdf%id,ID,att_name, &
+               xtype=xtype,len=att_len), 'Retrieving inquire_attribute: '//ncdf)
+          
+          select case ( xtype )
+          case ( NF90_CHAR ) 
+             att_char = " "
+             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), att_char), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.trim(att_char))
+          case ( NF90_SHORT )
+             allocate(a_ih(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_ih), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_ih)
+             deallocate(a_ih)
+          case ( NF90_INT )
+             allocate(a_is(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_is), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_is)
+             deallocate(a_is)
+          case ( NF90_FLOAT )
+             allocate(a_sp(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_sp), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_sp)
+             deallocate(a_sp)
+          case ( NF90_DOUBLE )
+             allocate(a_dp(att_len))
+             call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_dp), &
+                  "Retrieving the attribute value for file: "//ncdf)
+             atts = atts//(trim(att_name).KV.a_dp)
+             deallocate(a_dp)
+          end select
+       
+       end do
+       
+       return
+    end if
+
     ! Figure out if the dimension exists
-    iret = nf90_inquire_attribute(ncdf%id, NF90_GLOBAL, trim(name))
+    iret = nf90_inquire_attribute(ncdf%id, ID, trim(name))
     lexist = iret == NF90_NOERR
     if ( present(exist) ) then
        exist = lexist
     else if ( .not. lexist ) then
        call ncdf_err(iret,"Retrieving information about: "//trim(name)//" in file: "//ncdf)
     end if
+
+    ! we do not want to do anything but retrieve the attribute here
+    if ( .not. present(att) ) return
+
+    ! retrieve the attribute length
+    call ncdf_err(nf90_inquire_attribute(ncdf%id,ID,att_name, &
+         xtype=xtype,len=att_len),'Retrieving information: '//ncdf)
+          
+    select case ( xtype )
+    case ( NF90_CHAR ) 
+       att_char = ' '
+       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), att_char), &
+            "Retrieving the attribute value for file: "//ncdf)
+       call assign(att,trim(att_char))
+    case ( NF90_SHORT )
+       allocate(a_ih(att_len))
+       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_ih), &
+            "Retrieving the attribute value for file: "//ncdf)
+       call assign(att,a_ih)
+       deallocate(a_ih)
+    case ( NF90_INT )
+       allocate(a_is(att_len))
+       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_is), &
+            "Retrieving the attribute value for file: "//ncdf)
+       call assign(att,a_is)
+       deallocate(a_is)
+    case ( NF90_FLOAT )
+       allocate(a_sp(att_len))
+       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_sp), &
+            "Retrieving the attribute value for file: "//ncdf)
+       call assign(att,a_sp)
+       deallocate(a_sp)
+    case ( NF90_DOUBLE )
+       allocate(a_dp(att_len))
+       call ncdf_err(nf90_get_att(ncdf%id, ID, trim(att_name), a_dp), &
+            "Retrieving the attribute value for file: "//ncdf)
+       call assign(att,a_dp)
+       deallocate(a_dp)
+    end select
+    
   end subroutine ncdf_inq_gatt
 
   subroutine ncdf_inq_att(ncdf,var,name,exist)
