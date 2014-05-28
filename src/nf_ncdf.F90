@@ -440,7 +440,7 @@ contains
     integer, intent(in), optional :: access
 #ifdef NCDF_PARALLEL
     integer :: i,N
-    character(len=250) :: lname
+    character(len=NF90_MAX_NAME) :: lname
 
     if ( .not. ncdf_participate(this) ) return
     if ( .not. present(access) ) return
@@ -692,7 +692,7 @@ contains
     call ncdf_err(iret,"Defining variable: "//trim(name)//" in file: "//this)
 
     if ( present(atts) ) then
-       call put_att_id(this,id,atts)
+       call put_atts_id(this,id,atts)
     end if
 
     if ( present(access) ) then
@@ -840,7 +840,7 @@ contains
     integer :: iret ! We need to retain any error message...
     integer :: lid, nids, i
     integer :: ldids(10) ! In case the user only wishes to read a sub-part of the size
-    character(len=50) :: dim
+    character(len=NF90_MAX_NAME) :: dim
     logical :: lexist
     
     if ( .not. ncdf_participate(this) ) return
@@ -873,7 +873,7 @@ contains
 
     ! The user has requested information about the attributes associated...
     if ( present(atts) ) then
-       call get_att_id(this,lid,atts=atts)
+       call get_atts_id(this,lid,atts=atts)
     end if
 
   end subroutine ncdf_inq_var_def
@@ -911,7 +911,6 @@ contains
   end subroutine ncdf_inq_dim
 
   subroutine ncdf_inq_gatt(this,name,exist,len,xtype)
-    use dictionary
     use variable
     type(hNCDF),      intent(inout) :: this
     character(len=*), optional, intent(in)    :: name
@@ -961,45 +960,99 @@ contains
 
   end subroutine ncdf_inq_att
 
-  subroutine put_gatt(this,atts)
+  subroutine put_gatt(this,name,att,atts)
     use dictionary
+    use variable
     type(hNCDF), intent(inout) :: this
-    type(dict),  intent(inout) :: atts
+    character(len=*), optional, intent(in) :: name
+    type(var), optional, intent(inout) :: att
+    type(dict), optional, intent(inout) :: atts
+
     if ( .not. ncdf_participate(this) ) return
-    call put_att_id(this,NF90_GLOBAL,atts)
+
+    if ( present(name) .and. present(att) ) then
+       call put_att_id(this,NF90_GLOBAL,trim(name),att)
+    else if ( present(atts) ) then
+       call put_atts_id(this,NF90_GLOBAL,atts)
+    else
+       call ncdf_err(-100, &
+            'Programming error: put_gatt interface not properly populated')
+    end if
+
   end subroutine put_gatt
   
-  subroutine get_gatt(this,atts)
+  subroutine get_gatt(this,name,att,atts)
     use dictionary
+    use variable
     type(hNCDF), intent(inout) :: this
-    type(dict),  intent(inout) :: atts
+    character(len=*), optional, intent(in) :: name
+    type(var), optional, intent(inout) :: att
+    type(dict), optional, intent(inout) :: atts
+
     if ( .not. ncdf_participate(this) ) return
-    call get_att_id(this,NF90_GLOBAL,atts)
+
+    if ( present(name) .and. present(att) ) then
+       call get_att_id(this,NF90_GLOBAL,trim(name),att)
+    else if ( present(atts) ) then
+       call get_atts_id(this,NF90_GLOBAL,atts)
+    else
+       call ncdf_err(-100, &
+            'Programming error: get_gatt interface not properly populated')
+    end if
+
   end subroutine get_gatt
 
-  subroutine put_att(this,name,atts)
+  subroutine put_att(this,var,name,att,atts)
     use dictionary
+    use variable, vvar => var
     type(hNCDF), intent(inout) :: this
-    character(len=*), intent(in) :: name
-    type(dict),  intent(inout) :: atts
-    integer :: id
+    character(len=*), intent(in) :: var
+    character(len=*), optional, intent(in) :: name
+    type(vvar), optional, intent(inout) :: att
+    type(dict), optional, intent(inout) :: atts
+    integer :: ID
+
     if ( .not. ncdf_participate(this) ) return
-    call ncdf_inq_var(this,name,id=id)
-    call put_att_id(this,id,atts)
+
+    call ncdf_inq_var(this,var,id=ID)
+
+    if ( present(name) .and. present(att) ) then
+       call put_att_id(this,ID,trim(name),att)
+    else if ( present(atts) ) then
+       call put_atts_id(this,ID,atts)
+    else
+       call ncdf_err(-100, &
+            'Programming error: put_att interface not properly populated')
+    end if
+
   end subroutine put_att
   
-  subroutine get_att(this,name,atts)
+  subroutine get_att(this,var,name,att,atts)
     use dictionary
+    use variable, vvar => var
     type(hNCDF), intent(inout) :: this
-    character(len=*), intent(in) :: name
-    type(dict),  intent(inout) :: atts
-    integer :: id
+    character(len=*), intent(in) :: var
+    character(len=*), optional, intent(in) :: name
+    type(vvar), optional, intent(inout) :: att
+    type(dict), optional, intent(inout) :: atts
+    integer :: ID
+
     if ( .not. ncdf_participate(this) ) return
-    call ncdf_inq_var(this,name,id=id)
-    call get_att_id(this,id,atts)
+
+    call ncdf_inq_var(this,var,id=ID)
+
+    if ( present(name) .and. present(att) ) then
+       call get_att_id(this,ID,trim(name),att)
+    else if ( present(atts) ) then
+       call get_atts_id(this,ID,atts)
+    else
+       call ncdf_err(-100, &
+            'Programming error: get_att interface not properly populated')
+    end if
+
   end subroutine get_att
 
-  subroutine put_att_id(this,id,atts)
+  subroutine put_atts_id(this,id,atts)
     use iso_var_str
     use dictionary
     use variable
@@ -1009,7 +1062,7 @@ contains
     type(dict) :: att
     type(var)  :: at_var
     integer :: iret
-    character(len=NF90_MAX_NAME) :: tmp, key
+    character(len=NF90_MAX_NAME) :: key
 
     att = .first. atts
     att_loop: do 
@@ -1019,106 +1072,146 @@ contains
           att = .next. att
           cycle
        end if
+
+       ! we do not copy any data
        call associate(at_var,att)
-       
-       select case ( at_var%t )
-       case ( 'V0' )
-          tmp = at_var%v0
-          iret = nf90_put_att(this%id, id, trim(key), tmp)
-       case ( 'h0' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%h0)
-       case ( 'h1' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%h1)
-       case ( 'i0' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%i0)
-       case ( 'i1' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%i1)
-       case ( 's0' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%s0)
-       case ( 's1' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%s1)
-       case ( 'd0' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%d0)
-       case ( 'd1' )
-          iret = nf90_put_att(this%id, id, trim(key), at_var%d1)
-       case default
-          iret = -100
-       end select
-       call ncdf_err(iret, &
-            "Saving attribute: "//trim(key)// &
-            " in file: "//this)
+
+       call put_att_id(this,id,trim(key),at_var)
+
        att = .next. att
+
     end do att_loop
-       
+
     ! If the user adds this key, the dictionary will be deleted
     ! after usage...
     if ( "ATT_DELETE" .in. atts ) then
        call delete(atts)
     end if
     
+  end subroutine put_atts_id
+
+  subroutine put_att_id(this,id,name,att)
+    use iso_var_str
+    use variable
+    type(hNCDF), intent(inout) :: this
+    integer, intent(in) :: ID
+    character(len=*), intent(in) :: name
+    type(var),  intent(inout) :: att
+    integer :: iret
+    character(len=NF90_MAX_NAME) :: tmp
+
+    call ncdf_redef(this)
+
+    select case ( which(att) )
+    case ( 'V0' )
+       tmp = att%v0
+       iret = nf90_put_att(this%id, id, trim(name), tmp)
+    case ( 'h0' )
+       iret = nf90_put_att(this%id, id, trim(name), att%h0)
+    case ( 'h1' )
+       iret = nf90_put_att(this%id, id, trim(name), att%h1)
+    case ( 'i0' )
+       iret = nf90_put_att(this%id, id, trim(name), att%i0)
+    case ( 'i1' )
+       iret = nf90_put_att(this%id, id, trim(name), att%i1)
+    case ( 's0' )
+       iret = nf90_put_att(this%id, id, trim(name), att%s0)
+    case ( 's1' )
+       iret = nf90_put_att(this%id, id, trim(name), att%s1)
+    case ( 'd0' )
+       iret = nf90_put_att(this%id, id, trim(name), att%d0)
+    case ( 'd1' )
+       iret = nf90_put_att(this%id, id, trim(name), att%d1)
+    case default
+       iret = -100
+    end select
+    call ncdf_err(iret, &
+         "Saving attribute: "//trim(name)// &
+         " in file: "//this)
+       
   end subroutine put_att_id
 
-  subroutine get_att_id(this,id,atts)
+  subroutine get_atts_id(this,id,atts)
     use iso_var_str
     use dictionary
     use variable
     type(hNCDF), intent(inout) :: this
     integer, intent(in) :: ID
     type(dict),  intent(inout) :: atts
-    integer :: i, nAtts, xtype, att_len
-    character(len=500) :: att_name, att_char
-    real(sp), allocatable :: a_sp(:)
-    real(dp), allocatable :: a_dp(:)
-    integer(ih), allocatable :: a_ih(:)
-    integer(is), allocatable :: a_is(:)
+    integer :: i, nAtts
+    character(len=NF90_MAX_NAME) :: name
+    type(var) :: att
     
     call ncdf_err(nf90_inquire_variable(this%id, id, nAtts=nAtts), &
          "Retrieving number of associated attributes in inq_var for file: "//this)
 
     do i = 1 , nAtts
 
-       att_name = ' '
-       call ncdf_err(nf90_inq_attname(this%id, id, i, att_name), &
+       name = ' '
+       call ncdf_err(nf90_inq_attname(this%id, id, i, name), &
             "Retrieving the attribute name for file: "//this)
-       
-       ! retrieve the attribute length and data-type
-       call ncdf_err(nf90_inquire_attribute(this%id,id,att_name, &
-            xtype=xtype,len=att_len),'Retriving inquire_attribute: '//this)
-       
-       select case ( xtype )
-       case ( NF90_CHAR ) 
-          att_char = ' '
-          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), att_char), &
-               "Retrieving the attribute value for file: "//this)
-          atts = atts//(trim(att_name).KV.trim(att_char))
-       case ( NF90_SHORT )
-          allocate(a_ih(att_len))
-          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_ih), &
-               "Retrieving the attribute value for file: "//this)
-          atts = atts//(trim(att_name).KV.a_ih)
-          deallocate(a_ih)
-       case ( NF90_INT )
-          allocate(a_is(att_len))
-          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_is), &
-               "Retrieving the attribute value for file: "//this)
-          atts = atts//(trim(att_name).KV.a_is)
-          deallocate(a_is)
-       case ( NF90_FLOAT )
-          allocate(a_sp(att_len))
-          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_sp), &
-               "Retrieving the attribute value for file: "//this)
-          atts = atts//(trim(att_name).KV.a_sp)
-          deallocate(a_sp)
-       case ( NF90_DOUBLE )
-          allocate(a_dp(att_len))
-          call ncdf_err(nf90_get_att(this%id, id, trim(att_name), a_dp), &
-               "Retrieving the attribute value for file: "//this)
-          atts = atts//(trim(att_name).KV.a_dp)
-          deallocate(a_dp)
-       end select
-          
+
+       call get_att_id(this,id,name,att)
+
+       call add(atts,(trim(name).kv.att))
+
     end do
+
+    call delete(att)
     
+  end subroutine get_atts_id
+
+  subroutine get_att_id(this,ID,name,att)
+    use iso_var_str
+    use dictionary
+    use variable
+    type(hNCDF), intent(inout) :: this
+    integer, intent(in) :: ID
+    character(len=*), intent(in) :: name
+    type(var),  intent(inout) :: att
+    integer :: xtype, att_len
+    character(len=500) :: att_char
+    real(sp), allocatable :: a_sp(:)
+    real(dp), allocatable :: a_dp(:)
+    integer(ih), allocatable :: a_ih(:)
+    integer(is), allocatable :: a_is(:)
+    
+    ! retrieve the attribute length and data-type
+    call ncdf_err(nf90_inquire_attribute(this%id,id,trim(name), &
+         xtype=xtype,len=att_len),'Retriving inquire_attribute: '//this)
+       
+    select case ( xtype )
+    case ( NF90_CHAR ) 
+       att_char = ' '
+       call ncdf_err(nf90_get_att(this%id, id, trim(name), att_char), &
+            "Retrieving the attribute value for file: "//this)
+       call assign(att,trim(att_char))
+    case ( NF90_SHORT )
+       allocate(a_ih(att_len))
+       call ncdf_err(nf90_get_att(this%id, id, trim(name), a_ih), &
+            "Retrieving the attribute value for file: "//this)
+       call assign(att,a_ih)
+       deallocate(a_ih)
+    case ( NF90_INT )
+       allocate(a_is(att_len))
+       call ncdf_err(nf90_get_att(this%id, id, trim(name), a_is), &
+            "Retrieving the attribute value for file: "//this)
+       call assign(att,a_is)
+       deallocate(a_is)
+    case ( NF90_FLOAT )
+       allocate(a_sp(att_len))
+       call ncdf_err(nf90_get_att(this%id, id, trim(name), a_sp), &
+            "Retrieving the attribute value for file: "//this)
+       call assign(att,a_sp)
+       deallocate(a_sp)
+    case ( NF90_DOUBLE )
+       allocate(a_dp(att_len))
+       call ncdf_err(nf90_get_att(this%id, id, trim(name), a_dp), &
+            "Retrieving the attribute value for file: "//this)
+       call assign(att,a_dp)
+       deallocate(a_dp)
+    end select
+          
   end subroutine get_att_id
 
   ! Delete attributes
@@ -1290,16 +1383,18 @@ contains
 ! These routines or functions are global available even if the NetCDF is not used...
 
 ! functions for concatenating strings and ncdf handles.
-  character(len=300) function cat_char_ncdf(char,this)
+  function cat_char_ncdf(char,this) result(cat)
     character(len=*), intent(in) :: char
     type(hNCDF), intent(in) :: this
-    cat_char_ncdf = char//trim(this%name)
+    character(len=len(char)+len_trim(this%name)) :: cat
+    cat = char//trim(this%name)
   end function cat_char_ncdf
 
-  character(len=300) function cat_ncdf_char(this,char)
+  function cat_ncdf_char(this,char) result(cat)
     type(hNCDF), intent(in) :: this
     character(len=*), intent(in) :: char
-    cat_ncdf_char = trim(this%name)//char
+    character(len=len(char)+len_trim(this%name)) :: cat
+    cat = trim(this%name)//char
   end function cat_ncdf_char
 
   subroutine ncdf_IONode(io_Node)

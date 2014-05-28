@@ -4,6 +4,23 @@
 
 Every section in this part lists the change of the versions
 
+** <2014-05-28 Wed>
+Cleaned interfaces for putting/getting attributes.
+A single routine is now used for all put/get routines.
+
+The user can now also save a single attribute using the
+variable data type.
+
+** <2014-05-28 Wed>
+Changed interface names to conform with the standard.
+Accessing variables are with "name"
+Accessing attributes related to variables are with "var" and "name"
+
+The character functions now restricts their return values to
+the actual needed size of the byte-array.
+
+The NF90_MAX_NAME has been explicitly used in places were it is needed.
+
 ** <2014-05-27 Tue>
 Enabled retrieval of a dictionary containing all 
 attributes associated with a variable or the global
