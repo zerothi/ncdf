@@ -43,9 +43,11 @@ subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
   integer, intent(in), optional :: start(:)
   integer, intent(in), optional :: count(:)
   integer, intent(in), optional :: stride(:)
+#if DIM > 0 
   integer :: id
 #ifdef IS_COMPLEX
   REAL_TYPE, allocatable DIMS :: r,i
+#endif
 #endif
 #if DIM == 0
   VAR_TYPE :: v(1)

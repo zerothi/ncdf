@@ -18,7 +18,7 @@ program tst_ncdf_4
   ! Create the netcdf-file
   if ( Nodes > 1 ) then
      call ncdf_create(ncdf,'NCDF_par_4.nc',&
-          mode=ior(NF90_MPIIO,NF90_CLASSIC_MODEL), overwrite=.true., &
+          mode=NF90_MPIIO, overwrite=.true., &
           parallel=.true., &
           comm=MPI_Comm_World)
      ! parallel writes are not allowed with compression
@@ -43,16 +43,17 @@ program tst_ncdf_4
   call delete(dic)
 
   ! independent access in case of parallel
-  call ncdf_default(ncdf,access=NF90_INDEPENDENT)
+  call ncdf_default(ncdf,access=NF90_COLLECTIVE)
 
   call ncdf_def_grp(ncdf,'info',grp1)
   call ncdf_def_dim(grp1,'N',Nodes*2)
   call ncdf_def_var(grp1,'Nodes',NF90_INT,(/'N'/))
-  call ncdf_default(grp1,access=NF90_INDEPENDENT)
+  call ncdf_default(ncdf,access=NF90_COLLECTIVE)
   call ncdf_def_grp(grp1,'scndlevel',grp2)
   call ncdf_def_dim(grp2,'N',Nodes*2)
   call ncdf_def_var(grp2,'Nodes',NF90_INT,(/'N'/))
-  call ncdf_default(grp2,access=NF90_INDEPENDENT)
+  call ncdf_default(ncdf,access=NF90_COLLECTIVE)
+
 
   ! print out the leveled netcdf
   call ncdf_print(ncdf)

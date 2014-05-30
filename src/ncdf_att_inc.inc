@@ -39,7 +39,6 @@ subroutine ROUTINE2(get_gatt,VAR)(this, name, att)
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
   VAR_TYPE, intent(out)DIMS :: att
-  integer :: id
   if ( .not. ncdf_participate(this) ) return
   call ncdf_err(nf90_get_att(this%id, NF90_GLOBAL, name, att), &
        'Saving global (VAR) attribute: '//trim(name)//' in file: '//this)

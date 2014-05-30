@@ -23,7 +23,7 @@ LIBVARDICT  = ../lib/fvar/libvardict.a
 
 .PHONY: all
 
-TESTS = tst_ncdf_3 tst_ncdf_4
+TESTS = tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
 all: $(LIB_TST) $(TESTS)
 
 tst_ncdf_3: tst_ncdf_3.o
@@ -32,6 +32,11 @@ tst_ncdf_3: tst_ncdf_3.o
 	#mpirun -np 2 ./$@
 
 tst_ncdf_4: tst_ncdf_4.o
+	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
+	./$@
+	mpirun -np 2 ./$@
+
+tst_ncdf_att: tst_ncdf_att.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
 	./$@
 	mpirun -np 2 ./$@

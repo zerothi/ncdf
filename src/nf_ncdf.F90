@@ -1061,7 +1061,6 @@ contains
     type(dict),  intent(inout) :: atts
     type(dict) :: att
     type(var)  :: at_var
-    integer :: iret
     character(len=NF90_MAX_NAME) :: key
 
     att = .first. atts
@@ -1153,7 +1152,7 @@ contains
 
        call get_att_id(this,id,name,att)
 
-       call add(atts,(trim(name).kv.att))
+       call extend(atts,(trim(name).kv.att))
 
     end do
 
@@ -1330,8 +1329,14 @@ contains
        write(*,*)
        write(*,"(a)") "Error occured in NCDF:"
        write(0,"(a)") "Error occured in NCDF:"
-       write(*,"(a)") trim(nf90_strerror(status))
-       write(0,"(a)") trim(nf90_strerror(status))
+       select case ( status )
+       case ( -130 ) ! include/netcdf.h:#define NC_ECANTEXTEND   (-130)    /**< Attempt to extend dataset during ind. I/O operation. */ 
+          write(*,"(a)") 'Attempt to extend (UNLIMITED dimension) a parallel file in INDEPENDENT ACCESS mode'
+          write(0,"(a)") 'Attempt to extend (UNLIMITED dimension) a parallel file in INDEPENDENT ACCESS mode'
+       case default
+          write(*,"(a)") trim(nf90_strerror(status))
+          write(0,"(a)") trim(nf90_strerror(status))
+       end select
        write(*,"(a,tr1,i0)") "Status number:",status
        write(0,"(a,tr1,i0)") "Status number:",status
        call ncdf_die("NetCDF Error: Stopped due to error in NetCDF file")

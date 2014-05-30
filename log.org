@@ -4,6 +4,14 @@
 
 Every section in this part lists the change of the versions
 
+** <2014-05-30 Fri>
+Updated to conform with fvar-release 0.13
+
+** <2014-05-30 Fri>
+The parallel netcdf-4 test needed the COLLECTIVE flag 
+as the parallel access on unlimited dimensions must extend 
+simultaneously.
+
 ** <2014-05-28 Wed>
 Cleaned interfaces for putting/getting attributes.
 A single routine is now used for all put/get routines.

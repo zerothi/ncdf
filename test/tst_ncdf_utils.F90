@@ -6,7 +6,10 @@ module tst_ncdf_utils
 #endif
 
   implicit none
-  
+
+  integer, parameter :: sp = selected_real_kind(p=6)
+  integer, parameter :: dp = selected_real_kind(p=14)
+
   integer, private, save :: Node, Nodes
 
   interface c_interface
