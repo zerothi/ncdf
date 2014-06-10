@@ -4,22 +4,28 @@
 
 Every section in this part lists the change of the versions
 
-** <2014-05-30 Fri>
+** Changed BASH requirement to BASH >= 3 <2014-06-10 Tue>
+Instead of relying on BASH >= 4 we now settle at
+version 3. 
+I blame Mac for updating the bash version extremely slowly.
+:)
+
+** Updated to fvar-0.13 <2014-05-30 Fri>
 Updated to conform with fvar-release 0.13
 
-** <2014-05-30 Fri>
+** COLLECTIVE parallelism is necessary for unlimited dimensions <2014-05-30 Fri>
 The parallel netcdf-4 test needed the COLLECTIVE flag 
 as the parallel access on unlimited dimensions must extend 
 simultaneously.
 
-** <2014-05-28 Wed>
+** Cleaned routines <2014-05-28 Wed>
 Cleaned interfaces for putting/getting attributes.
 A single routine is now used for all put/get routines.
 
 The user can now also save a single attribute using the
 variable data type.
 
-** <2014-05-28 Wed>
+** Changed some interface names to a more strict sense <2014-05-28 Wed>
 Changed interface names to conform with the standard.
 Accessing variables are with "name"
 Accessing attributes related to variables are with "var" and "name"
@@ -29,20 +35,20 @@ the actual needed size of the byte-array.
 
 The NF90_MAX_NAME has been explicitly used in places were it is needed.
 
-** <2014-05-27 Tue>
+** Added get_att for only attributes (and all of them) <2014-05-27 Tue>
 Enabled retrieval of a dictionary containing all 
 attributes associated with a variable or the global
 attributes.
 
-** <2014-05-27 Tue>
+** Added get_att size information <2014-05-27 Tue>
 Extended attribute inquiries to also retrieve
 the data-type and the data length of the attributes.
 
-** <2014-05-25 Sun>
+** Enable compression for classic-model <2014-05-25 Sun>
 If the netcdf model is a classic model we can also enable 
 the compression.
 
-** <2014-05-25 Sun>
+** Ensured deletion of atts when not participating <2014-05-25 Sun>
 For passing attributes to the def_var routine we need
 to ensure that the dictionary gets deleted if the user 
 adds the key 'ATT_DELETE'.
@@ -50,12 +56,12 @@ However, for cases where some nodes are not part of the
 file we still need to enforce this to handle memory leakage
 correctly. This has been fixed.
 
-** <2014-05-25 Sun>
+** Parallel access on variables not in parallel files <2014-05-25 Sun>
 If a user request to change the default parallel access
 to variables we will return immediately if the file is not
 a parallel file.
 
-** <2014-05-25 Sun>
+** Deleting dict after atts= <2014-05-25 Sun>
 Added possibility to delete the dictionary after calling
 the def_var routine. 
 By adding the key 'ATT_DELETE' it will delete all entries.

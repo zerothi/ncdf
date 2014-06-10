@@ -10,18 +10,34 @@ source $var_dir/settings.sh
 # The different variable types used in this (long does not exist)
 vars=(h s d c z i)
 
-declare -A c_to_r
-c_to_r["c"]=s
-c_to_r["z"]=d
+function c_to_r {
+    local var=$1 ; shift
+    case $var in
+	c) _ps s ;;
+	z) _ps d ;;
+    esac
+}
+	   
+#declare -A c_to_r
+#c_to_r["c"]=s
+#c_to_r["z"]=d
 
-declare -A has_att
-for v in ${vars[@]} ; do
-    has_att[$v]=1
-done
-has_att["h"]=0
-has_att["c"]=0
-has_att["z"]=0
-has_att["l"]=0
+function has_att {
+    local var=$1 ; shift
+    case $var in
+	h|c|z|l) _ps 0 ;;
+	*) _ps 1 ;;
+    esac
+}
+	    
+#declare -A has_att
+#for v in ${vars[@]} ; do
+#    has_att[$v]=1
+#done
+#has_att["h"]=0
+#has_att["c"]=0
+#has_att["z"]=0
+#has_att["l"]=0
 
 # Create the interface files
 {
@@ -29,7 +45,7 @@ has_att["l"]=0
 for sub in put get ; do
 _psnl "interface ncdf_${sub}_var"
 for v in ${vars[@]} ; do
-    for d in `seq 0 ${N[$v]}` ; do 
+    for d in `seq 0 $(var_N $v)` ; do 
 	_psnl "module procedure ${sub}_var_${v}${d}_name"
     done
 done
@@ -41,8 +57,8 @@ for sub in ${ssub}_gatt ${ssub}_att ; do
 _psnl "interface ncdf_${sub}"
 _psnl "module procedure ${sub}"
 for v in ${vars[@]} ; do
-    [ ${has_att[$v]} -eq 0 ] && continue
-    for d in `seq 0 ${N[$v]}` ; do 
+    [ $(has_att $v) -eq 0 ] && continue
+    for d in `seq 0 $(var_N $v)` ; do 
 	# Attributes does not allow dimensions larger than 1
 	[ $d -gt 1 ] && continue
 	_psnl "module procedure ${sub}_${v}${d}"
@@ -66,8 +82,8 @@ done
 {
 _psnl "#undef VAR_PREC"
 for v in ${vars[@]} ; do
-    _psnl "#define VAR_TYPE ${name[$v]}"
-    for d in `seq 0 ${N[$v]}` ; do
+    _psnl "#define VAR_TYPE $(var_name $v)"
+    for d in `seq 0 $(var_N $v)` ; do
 	if [ $d -eq 0 ]; then
 	    _psnl "#define DIMS"
 	else
@@ -77,12 +93,12 @@ for v in ${vars[@]} ; do
 	_psnl "#define DIM $d"
 	if [ "$v" == "c" ] || [ "$v" == "z" ]; then
 	    _psnl "#define IS_COMPLEX"
-	    _psnl "#define REAL_TYPE ${name[${c_to_r[$v]}]}"
+	    _psnl "#define REAL_TYPE $(var_name $(c_to_r $v))"
 	else
 	    _psnl "#define REAL_TYPE VAR_TYPE"
 	fi
         # Attributes only allowed for dimensions larger than 1
-	if [ $d -le 1 ] && [ ${has_att[$v]} -eq 1 ]; then
+	if [ $d -le 1 ] && [ $(has_att $v) -eq 1 ]; then
 	    _psnl '#include "ncdf_att_inc.inc"'
 	fi
 	_psnl '#include "ncdf_var_inc.inc"'

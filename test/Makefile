@@ -13,17 +13,17 @@ $(LIB_TST): $(TST_UTILS)
 	$(RANLIB) $(LIB_TST)
 
 # The different libraries
-OBJS = test_ncdf.o
+OBJS= test_ncdf.o
 
 INC += -I../lib/fvar
 INC += -I../src
 
-LIB = ../src/libncdf.a $(LIB_TST)
-LIBVARDICT  = ../lib/fvar/libvardict.a
+LIB= ../src/libncdf.a $(LIB_TST)
+LIBVARDICT= ../lib/fvar/libvardict.a
 
 .PHONY: all
 
-TESTS = tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
+TESTS= tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
 all: $(LIB_TST) $(TESTS)
 
 tst_ncdf_3: tst_ncdf_3.o
@@ -43,5 +43,5 @@ tst_ncdf_att: tst_ncdf_att.o
 
 .PHONY: clean
 clean:
-	-rm -f *.o *.mod $(LIB_TST) tst_ncdf_3
+	-rm -f *.o *.mod $(LIB_TST) $(TESTS)
 	-rm -f *.nc
