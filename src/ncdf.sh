@@ -18,10 +18,6 @@ function c_to_r {
     esac
 }
 	   
-#declare -A c_to_r
-#c_to_r["c"]=s
-#c_to_r["z"]=d
-
 function has_att {
     local var=$1 ; shift
     case $var in
@@ -29,15 +25,21 @@ function has_att {
 	*) _ps 1 ;;
     esac
 }
-	    
-#declare -A has_att
-#for v in ${vars[@]} ; do
-#    has_att[$v]=1
-#done
-#has_att["h"]=0
-#has_att["c"]=0
-#has_att["z"]=0
-#has_att["l"]=0
+
+# Create subset inclusion for attributes
+{
+for v in V ${vars[@]} ; do
+    [ $(has_att $v) -eq 0 ] && continue
+    for d in `seq 0 $(var_N $v)` ; do 
+	# Attributes does not allow dimensions larger than 1
+	[ $d -gt 1 ] && continue
+	_psnl "type :: pt$v$d"
+	_psnl " $(var_name $v), pointer :: p$(dim_to_size $d)"
+	_psnl "end type pt$v$d"
+	_psnl "type(pt$v$d) :: p$v$d"
+    done
+done
+} > ncdf_att_var.inc
 
 # Create the interface files
 {

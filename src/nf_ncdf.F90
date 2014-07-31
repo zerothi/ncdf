@@ -1099,28 +1099,40 @@ contains
     integer :: iret
     character(len=NF90_MAX_NAME) :: tmp
 
+#include "ncdf_att_var.inc"
+
     call ncdf_redef(this)
 
     select case ( which(att) )
     case ( 'V0' )
-       tmp = att%v0
+       pv0 = transfer(att%enc,pv0)
+       tmp = pv0%p
        iret = nf90_put_att(this%id, id, trim(name), tmp)
-    case ( 'h0' )
-       iret = nf90_put_att(this%id, id, trim(name), att%h0)
-    case ( 'h1' )
-       iret = nf90_put_att(this%id, id, trim(name), att%h1)
+       ! Currently we do not allow half-integers to be attributes
+!    case ( 'h0' )
+!       ph0 = transfer(att%enc,ph0)
+!       iret = nf90_put_att(this%id, id, trim(name), ph0%p)
+!    case ( 'h1' )
+!       ph1 = transfer(att%enc,ph1)
+!       iret = nf90_put_att(this%id, id, trim(name), ph1%p)
     case ( 'i0' )
-       iret = nf90_put_att(this%id, id, trim(name), att%i0)
+       pi0 = transfer(att%enc,pi0)
+       iret = nf90_put_att(this%id, id, trim(name), pi0%p)
     case ( 'i1' )
-       iret = nf90_put_att(this%id, id, trim(name), att%i1)
+       pi1 = transfer(att%enc,pi1)
+       iret = nf90_put_att(this%id, id, trim(name), pi1%p)
     case ( 's0' )
-       iret = nf90_put_att(this%id, id, trim(name), att%s0)
+       ps0 = transfer(att%enc,ps0)
+       iret = nf90_put_att(this%id, id, trim(name), ps0%p)
     case ( 's1' )
-       iret = nf90_put_att(this%id, id, trim(name), att%s1)
+       ps1 = transfer(att%enc,ps1)
+       iret = nf90_put_att(this%id, id, trim(name), ps1%p)
     case ( 'd0' )
-       iret = nf90_put_att(this%id, id, trim(name), att%d0)
+       pd0 = transfer(att%enc,pd0)
+       iret = nf90_put_att(this%id, id, trim(name), pd0%p)
     case ( 'd1' )
-       iret = nf90_put_att(this%id, id, trim(name), att%d1)
+       pd1 = transfer(att%enc,pd1)
+       iret = nf90_put_att(this%id, id, trim(name), pd1%p)
     case default
        iret = -100
     end select

@@ -4,6 +4,11 @@
 
 Every section in this part lists the change of the versions
 
+** Updated to handle new fvar with encoding <2014-07-31 Thu>
+The fvar library has been updated and using the data
+types is now a bit more tedious. Yet, they provide a 
+heavily reduced memory footprint for many variables.
+
 ** Changed BASH requirement to BASH >= 3 <2014-06-10 Tue>
 Instead of relying on BASH >= 4 we now settle at
 version 3. 
