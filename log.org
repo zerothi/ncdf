@@ -4,6 +4,23 @@
 
 Every section in this part lists the change of the versions
 
+** Clean-up code for type(var) usage in attributes <2014-07-31 Thu>
+type(var) was not utilised to its full capabilities. We now 
+rely on the full variable implementation (which was the intent).
+
+** Bugfixes for ncdf <2014-07-31 Thu>
+A bug of reusing a hNCDF was erroneous as it could possibly
+retain information from the previous one.
+We now ensure that it is reset on close.
+
+Added chunks to def_var to set the chunking level of the variable.
+
+Bugfix for gatt fetches as the get_att_id was not considering when
+the attribute was global or not. We now check for globality.
+
+Bugfix for fetching attributes. All attributes with length one
+are now saved in the attribute as a scalar rather than a 1D size 1 array.
+
 ** Updated to handle new fvar with encoding <2014-07-31 Thu>
 The fvar library has been updated and using the data
 types is now a bit more tedious. Yet, they provide a 

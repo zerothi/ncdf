@@ -97,6 +97,7 @@ module nf_ncdf
   private :: cat_char_ncdf
   private :: cat_ncdf_char
   private :: ncdf_die
+  private :: h_reset
 
   ! We add a specific NetCDF handle for dealing with files
   type :: hNCDF
@@ -170,6 +171,19 @@ contains
     copy = this
   end subroutine ncdf_copy
 
+  ! Local subroutine to reset the ncdf handle
+  subroutine h_reset(this)
+    type(hNCDF), intent(inout)  :: this
+    this%id = -1
+    this%parallel = .false.
+    this%define   = 0
+    this%mode     = 0
+    this%name     = " "
+    this%grp      = " "
+    this%comm     = -1
+    this%comp_lvl = 0
+  end subroutine h_reset
+
   subroutine ncdf_init(this,name,mode,parallel,comm,overwrite,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi
@@ -187,14 +201,8 @@ contains
     integer :: MPIerror
 #endif
 
-    this%id       = -1
-    this%parallel = .false.
-    this%define   = 0
-    this%mode     = 0
-    this%name     = " "
+    call h_reset(this)
     if ( present(name) ) this%name = name
-    this%grp      = " "
-    this%comp_lvl = 0
     if ( present(compress_lvl) ) this%comp_lvl = compress_lvl
 
     if ( .not. present(mode) ) then
@@ -481,8 +489,9 @@ contains
     if ( this%id < 0 ) return
 
     call ncdf_err(nf90_close(this%id),"Closing NetCDF file: "//this)
-    
-    this%id = -1
+
+    ! Reset
+    call h_reset(this)
 
   end subroutine ncdf_close
 
@@ -647,7 +656,7 @@ contains
 ! This routine *MUST* be called after ncdf_participate 
 ! (however, as it is a local routine the burden is ours, not the programmers) 
   subroutine ncdf_def_var_generic(this,name,type,dims,id,atts, &
-       compress_lvl,shuffle, access)
+       compress_lvl,shuffle, access, chunks)
     use iso_var_str
     use variable
     use dictionary
@@ -659,7 +668,7 @@ contains
     type(dict),                      optional :: atts
     integer,          intent(in),    optional :: compress_lvl
     logical,          intent(in),    optional :: shuffle
-    integer,          intent(in),    optional :: access
+    integer,          intent(in),    optional :: access, chunks(:)
 #ifdef NCDF_4
     integer :: loc_compress_lvl
     logical :: lshuffle
@@ -686,10 +695,22 @@ contains
        iret = nf90_def_var(this%id, name, type, ldims, id)
     end if
 #else
-! In case of NetCDF 3
-       iret = nf90_def_var(this%id, name, type, ldims, id)
+    ! In case of NetCDF 3
+    iret = nf90_def_var(this%id, name, type, ldims, id)
 #endif
     call ncdf_err(iret,"Defining variable: "//trim(name)//" in file: "//this)
+
+#ifdef NCDF_4
+    if ( present(chunks) ) then
+       ! Set the chunking
+       ldims = 1
+       do i = 1 , min(size(chunks),size(dims))
+          ldims(i) = chunks(i)
+       end do
+       iret = nf90_def_var_chunking(this%id, id, NF90_CHUNKED, ldims)
+       call ncdf_err(iret,"Setting chunk size variable: "//trim(name)//" in file: "//this)
+    end if
+#endif
 
     if ( present(atts) ) then
        call put_atts_id(this,id,atts)
@@ -703,7 +724,7 @@ contains
 
   subroutine ncdf_def_var_integer(this, name, type, dims, &
        atts, compress_lvl, shuffle, fill, &
-       access)
+       access, chunks)
     use dictionary
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
@@ -712,7 +733,7 @@ contains
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: shuffle, fill
-    integer, intent(in), optional :: access
+    integer, intent(in), optional :: access, chunks(:)
     integer :: id
 
     if ( .not. ncdf_participate(this) ) then
@@ -729,7 +750,7 @@ contains
 
     call ncdf_def_var_generic(this, name, type, dims, id, &
          atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
-         access=access)
+         access=access, chunks=chunks)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -744,7 +765,7 @@ contains
 
   subroutine ncdf_def_var_logical(this, name, type, dims, &
        atts, compress_lvl, shuffle, fill, &
-       access)
+       access, chunks)
     use dictionary
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in) :: name
@@ -753,7 +774,7 @@ contains
     type(dict), optional :: atts
     integer, intent(in), optional :: compress_lvl
     logical, intent(in), optional :: shuffle, fill
-    integer, intent(in), optional :: access
+    integer, intent(in), optional :: access, chunks(:)
     integer :: id
     integer :: ltype
 
@@ -783,7 +804,7 @@ contains
 
     call ncdf_def_var_generic(this, "Re"//trim(name), ltype, dims, id, &
          atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
-         access=access)
+         access=access, chunks=chunks)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -795,7 +816,7 @@ contains
     end if
     call ncdf_def_var_generic(this, "Im"//trim(name), ltype, dims, id, &
          atts=atts, compress_lvl=compress_lvl, shuffle=shuffle, &
-         access=access)
+         access=access, chunks=chunks)
     if ( present(fill) ) then
        if ( fill ) then
           call ncdf_err(nf90_def_var_fill(this%id,id, 1, 0), &
@@ -1097,42 +1118,43 @@ contains
     character(len=*), intent(in) :: name
     type(var),  intent(inout) :: att
     integer :: iret
-    character(len=NF90_MAX_NAME) :: tmp
 
-#include "ncdf_att_var.inc"
+    character(len=NF90_MAX_NAME) :: tmp
+    integer(ih), pointer :: h0, h1(:)
+    integer(is), pointer :: i0, i1(:)
+    real(sp), pointer :: s0, s1(:)
+    real(dp), pointer :: d0, d1(:)
 
     call ncdf_redef(this)
 
     select case ( which(att) )
     case ( 'V0' )
-       pv0 = transfer(att%enc,pv0)
-       tmp = pv0%p
+       call assign(tmp,att)
        iret = nf90_put_att(this%id, id, trim(name), tmp)
-       ! Currently we do not allow half-integers to be attributes
-!    case ( 'h0' )
-!       ph0 = transfer(att%enc,ph0)
-!       iret = nf90_put_att(this%id, id, trim(name), ph0%p)
-!    case ( 'h1' )
-!       ph1 = transfer(att%enc,ph1)
-!       iret = nf90_put_att(this%id, id, trim(name), ph1%p)
+    case ( 'h0' )
+       call associate(h0,att)
+       iret = nf90_put_att(this%id, id, trim(name), h0)
+    case ( 'h1' )
+       call associate(h1,att)
+       iret = nf90_put_att(this%id, id, trim(name), h1)
     case ( 'i0' )
-       pi0 = transfer(att%enc,pi0)
-       iret = nf90_put_att(this%id, id, trim(name), pi0%p)
+       call associate(i0,att)
+       iret = nf90_put_att(this%id, id, trim(name), i0)
     case ( 'i1' )
-       pi1 = transfer(att%enc,pi1)
-       iret = nf90_put_att(this%id, id, trim(name), pi1%p)
+       call associate(i1,att)
+       iret = nf90_put_att(this%id, id, trim(name), i1)
     case ( 's0' )
-       ps0 = transfer(att%enc,ps0)
-       iret = nf90_put_att(this%id, id, trim(name), ps0%p)
+       call associate(s0,att)
+       iret = nf90_put_att(this%id, id, trim(name), s0)
     case ( 's1' )
-       ps1 = transfer(att%enc,ps1)
-       iret = nf90_put_att(this%id, id, trim(name), ps1%p)
+       call associate(s1,att)
+       iret = nf90_put_att(this%id, id, trim(name), s1)
     case ( 'd0' )
-       pd0 = transfer(att%enc,pd0)
-       iret = nf90_put_att(this%id, id, trim(name), pd0%p)
+       call associate(d0,att)
+       iret = nf90_put_att(this%id, id, trim(name), d0)
     case ( 'd1' )
-       pd1 = transfer(att%enc,pd1)
-       iret = nf90_put_att(this%id, id, trim(name), pd1%p)
+       call associate(d1,att)
+       iret = nf90_put_att(this%id, id, trim(name), d1)
     case default
        iret = -100
     end select
@@ -1152,9 +1174,14 @@ contains
     integer :: i, nAtts
     character(len=NF90_MAX_NAME) :: name
     type(var) :: att
-    
-    call ncdf_err(nf90_inquire_variable(this%id, id, nAtts=nAtts), &
-         "Retrieving number of associated attributes in inq_var for file: "//this)
+
+    if ( id == NF90_GLOBAL ) then
+       call ncdf_err(nf90_inquire(this%id, nAttributes=nAtts), &
+            "Retrieving number of associated attributes in inquire for file: "//this)
+    else
+       call ncdf_err(nf90_inquire_variable(this%id, id, nAtts=nAtts), &
+            "Retrieving number of associated attributes in inq_var for file: "//this)
+    end if
 
     do i = 1 , nAtts
 
@@ -1201,25 +1228,41 @@ contains
        allocate(a_ih(att_len))
        call ncdf_err(nf90_get_att(this%id, id, trim(name), a_ih), &
             "Retrieving the attribute value for file: "//this)
-       call assign(att,a_ih)
+       if ( att_len == 1 ) then
+          call assign(att,a_ih(1))
+       else
+          call assign(att,a_ih)
+       end if
        deallocate(a_ih)
     case ( NF90_INT )
        allocate(a_is(att_len))
        call ncdf_err(nf90_get_att(this%id, id, trim(name), a_is), &
             "Retrieving the attribute value for file: "//this)
-       call assign(att,a_is)
+       if ( att_len == 1 ) then
+          call assign(att,a_is(1))
+       else
+          call assign(att,a_is)
+       end if
        deallocate(a_is)
     case ( NF90_FLOAT )
        allocate(a_sp(att_len))
        call ncdf_err(nf90_get_att(this%id, id, trim(name), a_sp), &
             "Retrieving the attribute value for file: "//this)
-       call assign(att,a_sp)
+       if ( att_len == 1 ) then
+          call assign(att,a_sp(1))
+       else
+          call assign(att,a_sp)
+       end if
        deallocate(a_sp)
     case ( NF90_DOUBLE )
        allocate(a_dp(att_len))
        call ncdf_err(nf90_get_att(this%id, id, trim(name), a_dp), &
             "Retrieving the attribute value for file: "//this)
-       call assign(att,a_dp)
+       if ( att_len == 1 ) then
+          call assign(att,a_dp(1))
+       else
+          call assign(att,a_dp)
+       end if
        deallocate(a_dp)
     end select
           

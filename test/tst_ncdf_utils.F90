@@ -4,6 +4,8 @@ module tst_ncdf_utils
 #ifdef NCDF_PARALLEL
   use mpi
 #endif
+  use variable
+  use dictionary
 
   implicit none
 
