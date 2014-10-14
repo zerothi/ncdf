@@ -1414,11 +1414,19 @@ contains
 
   subroutine ncdf_redef(this)
     type(hNCDF), intent(inout) :: this
+    integer :: i
     ! Already in define mode:
     if ( this%define == 0 ) return
     this%define = 0
     if ( .not. ncdf_participate(this) ) return
-    call ncdf_err(nf90_redef(this%f_id), &
+    i = nf90_redef(this%f_id)
+    if ( i == nf90_noerr ) return
+    if ( i == nf90_eindefine ) then
+       ! we pass, the in-define mode
+       ! just tells us that we are already in define-mode
+       return
+    end if
+    call ncdf_err(i, &
          "Redef definition segment in file: "//this)
   end subroutine ncdf_redef
 
@@ -1483,6 +1491,28 @@ contains
          "Creating group "//trim(name)//" in file "//this)
 
   end subroutine ncdf_def_grp
+
+  ! Open a group from an existing file
+  subroutine ncdf_open_grp(this,name,grp)
+    type(hNCDF), intent(inout) :: this
+    character(len=*), intent(in) :: name
+    type(hNCDF), intent(out) :: grp
+
+    ! Copy the information regarding the parent ncdf
+    ! We need to do this out-side (as the information
+    ! required to denote the owner of the file)
+    call ncdf_copy(this,grp)
+    
+    if ( .not. ncdf_participate(grp) ) return
+
+    ! Save the group name... (we save it with hiercharal notice /"grp1"/"grp2")
+    grp%grp = trim(this%grp)//"/"//trim(name)
+
+    ! Find the group and return
+    call ncdf_err(nf90_inq_grp_full_ncid(grp%f_id, trim(grp%grp), grp%id))
+
+  end subroutine ncdf_open_grp
+    
 
 ! ################################################################
 ! ################## End of group routines #######################

@@ -4,6 +4,17 @@
 
 Every section in this part lists the change of the versions
 
+** Enabled opening of groups from ncdf <2014-10-14 Tue>
+The opening of groups could before only be done using the regular
+ncdf_open construct.
+We now enable this command:
+  call ncdf_group_open(ncdf,groupname,grp)
+to ease the group-handling.
+
+** Bugfix for redef <2014-10-14 Tue>
+Similar to the fix with enddef (changed <2014-10-14 Tue>) we enable the
+same thing in redef.
+
 ** Cleaned up build instructions <2014-10-14 Tue>
 The build instructions can now utilise a user supplied path
 to libvardict.a which enables the build process to be
