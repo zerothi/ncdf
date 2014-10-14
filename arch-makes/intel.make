@@ -13,11 +13,11 @@ FFLAGS=-O2 -m64 -fPIC
 PP = fpp -P
 
 C_V = intel-13.1.1
-MPI_PATH=/opt/openmpi/1.6.5/$(C_V)
+MPI_PATH=/opt/openmpi/1.8.3/$(C_V)
 NCDF_PATH=/opt/netcdf/4.3.2/$(C_V)
 Z_PATH=/opt/zlib/1.2.8/$(C_V)
 HDF5_PATH=/opt/hdf5/1.8.12/$(C_V)
-PNCDF_PATH=/opt/pnetcdf/1.4.1/$(C_V)
+PNCDF_PATH=/opt/pnetcdf/1.5.0/$(C_V)
 
 INC = -I$(Z_PATH)/include \
          -I$(HDF5_PATH)/include \
@@ -40,13 +40,13 @@ LIB_PATH= -L$(Z_PATH)/lib \
 LDFLAGS = $(LIB_PATH) -lnetcdff -lnetcdf -lpnetcdf -lhdf5hl_fortran -lhdf5_fortran -lhdf5_hl -lhdf5 -lz
 
 AR=xiar
-ARFLAGS = cru
-RANLIB=ranlib
 
 #FPPFLAGS += -DNCDF_4
 FPPFLAGS += -DNCDF_PARALLEL -DNCDF_4
 #FPPFLAGS += -DNCDF_PARALLEL
 
+# We need the library in the local repo
+INC += -I../lib/fvar
 
 .F90.o:
 	$(FC) -c $(INC) $(FFLAGS) $(FPPFLAGS) $< 

@@ -1,6 +1,12 @@
 .SUFFIXES: .f90 .o .a
 include ../arch.make
 
+# Setup the default things, in case they haven't been set.
+AR         ?= ar
+ARFLAGS    ?= cru
+RANLIB     ?= ranlib
+LIBVARDICT ?= ../lib/fvar/libvardict.a
+
 # The VPATH can be different, however the tree-structure
 # has to be the same in this case.
 VPATH?=$(shell pwd)
@@ -10,25 +16,17 @@ default: lib
 
 # Add user preprocessor flags
 PP += $(FPPFLAGS)
-# The different libraries
+# The different object files for this library.
 OBJS = nf_ncdf.o
 
-INC      += -I../lib/fvar
-INCFLAGS += -I../lib/fvar
-
 LIB = libncdf.a
-LIBVARDICT = ../lib/fvar/libvardict.a
 
 .PHONY: lib
-lib: $(LIBVARDICT) $(LIB)
+lib: $(LIB)
 
-$(LIB): $(LIBVARDICT) $(OBJS)
-	$(AR) $(ARFLAGS) $(LIB) $(LIBVARDICT) $(OBJS)
+$(LIB): $(OBJS)
+	$(AR) $(ARFLAGS) $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)
-
-$(LIBVARDICT):
-	@echo "*** Ensure succesful compilation of $(LIBVARDICT) ***"
-	exit 1
 
 SED_DEL = 's/NEWLINE/\n/g;/^$$/d;/^\!.*&/d;\
 s/[[:space:]]*\#\#[[:space:]]*\([^[:space:]]*\)/\1/g;\
@@ -42,9 +40,9 @@ prep:
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJS) $(LIB) $(LIBVARDICT) *.o *.mod tmp.F90 nf_ncdf.f90
+	-rm -f $(OBJS) $(LIB) *.o *.mod tmp.F90 nf_ncdf.f90
 	-rm -f ncdf_interface.inc ncdf_funcs.inc
 
 # Dependencies
 nf_ncdf.f90: | prep
-nf_ncdf.o: $(LIBVARDICT) | prep
+nf_ncdf.o: | prep
