@@ -4,6 +4,17 @@
 
 Every section in this part lists the change of the versions
 
+** Cleaned up build instructions <2014-10-14 Tue>
+The build instructions can now utilise a user supplied path
+to libvardict.a which enables the build process to be
+fully controlled by the environment.
+
+** NCDF enddef changed <2014-10-14 Tue>
+In case ncdf_enddef is called and a NF90_ENOTINDEFINE
+error is issued we will now not error out.
+It is just telling the user that the file is already in
+define mode.
+
 ** Clean-up code for type(var) usage in attributes <2014-07-31 Thu>
 type(var) was not utilised to its full capabilities. We now 
 rely on the full variable implementation (which was the intent).
