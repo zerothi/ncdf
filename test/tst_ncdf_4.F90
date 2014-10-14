@@ -54,7 +54,6 @@ program tst_ncdf_4
   call ncdf_def_var(grp2,'Nodes',NF90_INT,(/'N'/))
   call ncdf_default(ncdf,access=NF90_COLLECTIVE)
 
-
   ! print out the leveled netcdf
   call ncdf_print(ncdf)
   call ncdf_print(grp1)
@@ -66,6 +65,7 @@ program tst_ncdf_4
         call ncdf_put_var(grp2,'Nodes',i,start=(/i/))
      end if
   end do
+
   do i = 1 , 10
      if ( mod(i,Nodes) == Node ) then
         call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/))

@@ -101,7 +101,9 @@ module nf_ncdf
 
   ! We add a specific NetCDF handle for dealing with files
   type :: hNCDF
+     ! The top file id (in case Groups are used)
      ! The file-handle for the netCDF-file
+     integer            :: f_id = -1
      integer            :: id = -1
      ! Whether the file is handled parallely
      logical            :: parallel = .false.
@@ -127,6 +129,15 @@ module nf_ncdf
      module procedure cat_ncdf_char
   end interface operator (//)
 
+  ! Interface
+  interface parallel
+     module procedure parallel_
+  end interface parallel
+  private :: parallel_
+  interface parallel_io
+     module procedure parallel_io_
+  end interface parallel_io
+  private :: parallel_io_
 
   ! Interface for creating variables
   interface ncdf_def_var
@@ -165,6 +176,22 @@ contains
 ! Every routine in this module needs NetCDF
 ! So it is sourrounded by this...
 
+  function parallel_(this) result(par)
+    type(hNCDF), intent(in) :: this
+    logical :: par
+    par = this%parallel
+  end function parallel_
+
+  function parallel_io_(this) result(par)
+    type(hNCDF), intent(in) :: this
+    logical :: par
+    par = iand(NF90_MPIIO,this%mode) == NF90_MPIIO
+    if ( par ) return
+    par = iand(NF90_MPIPOSIX,this%mode) == NF90_MPIPOSIX
+    if ( par ) return
+    par = iand(NF90_PNETCDF,this%mode) == NF90_PNETCDF
+  end function parallel_io_
+
   subroutine ncdf_copy(this,copy)
     type(hNCDF), intent(in) :: this
     type(hNCDF), intent(out) :: copy
@@ -174,6 +201,7 @@ contains
   ! Local subroutine to reset the ncdf handle
   subroutine h_reset(this)
     type(hNCDF), intent(inout)  :: this
+    this%f_id = -1
     this%id = -1
     this%parallel = .false.
     this%define   = 0
@@ -357,44 +385,38 @@ contains
 
     if ( this%parallel .and. this%comm >= 0 ) then
 #ifdef NCDF_PARALLEL
-       call ncdf_err(nf90_create(filename, this%mode , this%id, &
+       call ncdf_err(nf90_create(filename, this%mode , this%f_id, &
             comm = this%comm, info=MPI_INFO_NULL), &
             "Creating file: "//this//" with communicator")
 #else
        call ncdf_err(-100,"Not compiled with communicater parallel")
 #endif
     else if ( this%parallel ) then
-       call ncdf_err(nf90_create(filename, this%mode , this%id), &
+       call ncdf_err(nf90_create(filename, this%mode , this%f_id), &
             "Creating file: "//this//" in parallel")
     else
-       call ncdf_err(nf90_create(filename, this%mode , this%id), &
+       call ncdf_err(nf90_create(filename, this%mode , this%f_id), &
             "Creating file: "//this)
     end if
     ! We could check for mode == NF90_SHARE in case of parallel...
     ! However, it does not make sense as the other is still correct, just slow
 
-    ! In case the NetCDF format is a CDF4 file, we do not need to alter define
-    ! modes
-    call ncdf_inq(this, format=file_format)
-    select case ( file_format ) 
-    case ( NF90_FORMAT_NETCDF4 )
-       ! NetCDF4-classic still uses define/undefine
-       this%define = -1
-    end select
+    this%id = this%f_id
 
   end subroutine ncdf_create
 
-  subroutine ncdf_open(this,filename,mode,parallel,comm,compress_lvl)
+  subroutine ncdf_open(this,filename,groupname,mode,parallel,comm,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
-    type(hNCDF),    intent(inout)   :: this    
-    character(len=*), intent(in)  :: filename
+    type(hNCDF),    intent(inout)   :: this 
+    character(len=*), intent(in) :: filename
+    character(len=*), optional, intent(in) :: groupname
     integer, optional, intent(in) :: mode
     logical, optional, intent(in) :: parallel
     integer, optional, intent(in) :: comm
     integer, optional, intent(in) :: compress_lvl
-    integer :: file_format
+    integer :: file_format, i
     logical :: exist
 
     ! Save the general information which should be accesible to all processors
@@ -420,25 +442,27 @@ contains
 
     if ( this%parallel .and. this%comm >= 0 ) then
 #ifdef NCDF_PARALLEL
-       call ncdf_err(nf90_open(filename, this%mode , this%id, &
+       call ncdf_err(nf90_open(filename, this%mode , this%f_id, &
             comm = this%comm, info=MPI_INFO_NULL), &
                "Opening file: "//this//" with communicator")
 #else
        call ncdf_err(-100,"Code not compiled with NCDF_PARALLEL")
 #endif
     else if ( this%parallel ) then
-       call ncdf_err(nf90_open(filename, this%mode , this%id), &
+       call ncdf_err(nf90_open(filename, this%mode , this%f_id), &
             "Opening file: "//this//" in parallel")
     else
-       call ncdf_err(nf90_open(filename, this%mode , this%id), &
+       call ncdf_err(nf90_open(filename, this%mode , this%f_id), &
             "Opening file: "//this)
     end if
+
+    ! Copy so that we can create inquiry
+    this%id = this%f_id
     
-    call ncdf_inq(this, format=file_format)
-    select case ( file_format ) 
-    case ( NF90_FORMAT_NETCDF4 )
-       this%define = -1
-    end select
+    if ( present(groupname) ) then
+       this%grp = '/'//trim(groupname)
+       call ncdf_err(nf90_inq_grp_full_ncid(this%f_id, trim(this%grp), this%id))
+    end if
 
   end subroutine ncdf_open
 
@@ -486,22 +510,29 @@ contains
 
     if ( .not. ncdf_participate(this) ) return
 
-    if ( this%id < 0 ) return
+    if ( this%f_id < 0 ) return
 
-    call ncdf_err(nf90_close(this%id),"Closing NetCDF file: "//this)
+    call ncdf_err(nf90_close(this%f_id),"Closing NetCDF file: "//this)
 
     ! Reset
     call h_reset(this)
 
   end subroutine ncdf_close
 
-  subroutine ncdf_inq_ncdf(this,dims,vars,atts,format,grps,exist)
-    type(hNCDF), intent(in) :: this
+  subroutine ncdf_inq_ncdf(this,dims,vars,atts,format,grps,exist, &
+       dict_dim, dict_att)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
     integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
-    integer :: ldims, lvars, latts, lformat, lgrps
+    ! possibly obtain all attributes, dimensions
+    type(dict), optional, intent(inout) :: dict_dim, dict_att
+
+    integer :: ldims, lvars, latts, lformat, lgrps, val, i
     integer, allocatable :: grp_id(:)
+    character(len=NF90_MAX_NAME) :: key
     
+
     if ( .not. ncdf_participate(this) ) return
 
     ! A file-check has been requested...
@@ -524,6 +555,18 @@ contains
     if ( present(atts) )   atts   = latts
     if ( present(format) ) format = lformat
 
+    if ( present(dict_dim) ) then
+       do i = 1 , ldims
+          call ncdf_err(nf90_inquire_dimension(this%id,i,name=key))
+          call ncdf_inq_dim(this,key,len=val)
+          dict_dim = dict_dim // (trim(key).kv.val)
+       end do
+    end if
+
+    if ( present(dict_att) ) then
+       call get_atts_id(this,NF90_GLOBAL,dict_att)
+    end if
+
     if ( present(grps) ) then
        if ( IAND(this%mode,NF90_NETCDF4) == NF90_NETCDF4 ) then
           allocate(grp_id(50))
@@ -543,10 +586,15 @@ contains
     
   end subroutine ncdf_inq_ncdf
 
-  subroutine ncdf_inq_name(name,dims,vars,atts,format,grps,exist)
+  subroutine ncdf_inq_name(name,dims,vars,atts,format,grps,exist, &
+       dict_dim, dict_att)
+    use dictionary
     character(len=*), intent(in)   :: name
     integer, optional, intent(out) :: dims, vars, atts, format, grps
     logical, optional, intent(out) :: exist
+    ! possibly obtain all attributes, dimensions
+    type(dict), optional, intent(inout) :: dict_dim, dict_att
+
     type(hNCDF) :: this
 
     ! A file-check has been requested...
@@ -561,7 +609,7 @@ contains
     call ncdf_open(this,name,parallel=.false.)
     ! Do the inquiry...
     call ncdf_inq_ncdf(this,dims=dims,vars=vars,atts=atts,grps=grps,&
-         format=format)
+         format=format,dict_dim=dict_dim,dict_att=dict_att)
     ! Close the file
     call ncdf_close(this)
 
@@ -1331,38 +1379,47 @@ contains
 
   end subroutine ncdf_fill
 
-
 ! Use the netcdf_wrap.sh script to generate the needed code...
 #include "ncdf_funcs.inc"
 
   subroutine ncdf_enddef(this)
     type(hNCDF), intent(inout) :: this
-    ! A NetCDF4 file, (does not need define/data mode)
-    if ( this%define < 0 ) return
-    ! Already in data mode:
+    integer :: i
+
+    ! A NetCDF4 file still needs to define/redefine
+    ! in collective manner, yet it is taken care of
+    ! internally.
     if ( this%define == 1 ) return
     this%define = 1
     if ( .not. ncdf_participate(this) ) return
-    call ncdf_err(nf90_enddef(this%id),"End definition segment of file: "//this)
+    i = nf90_enddef(this%f_id)
+    if ( i == nf90_noerr ) return
+    if ( i == nf90_enotindefine ) then
+       ! we pass, the not-in-define mode
+       ! just tells us that we are already in data-mode
+       return
+    end if
+    call ncdf_err(i, "End definition segment of file: "//this)
+
   end subroutine ncdf_enddef
 
   subroutine ncdf_sync(this)
     type(hNCDF), intent(in) :: this
-    if ( .not. ncdf_participate(this) ) return
     ! We need (must) not sync when in definition mode...
     if ( this%define == 0 ) return
-    call ncdf_err(nf90_sync(this%id),"File syncronization for file"//this)
+    if ( .not. ncdf_participate(this) ) return
+    call ncdf_err(nf90_sync(this%f_id), &
+         "File syncronization for file"//this)
   end subroutine ncdf_sync
 
   subroutine ncdf_redef(this)
     type(hNCDF), intent(inout) :: this
-    ! A NetCDF4 file, (does not need define/data mode)
-    if ( this%define < 0 ) return
     ! Already in define mode:
     if ( this%define == 0 ) return
     this%define = 0
     if ( .not. ncdf_participate(this) ) return
-    call ncdf_err(nf90_redef(this%id),"Redef definition segment in file: "//this)
+    call ncdf_err(nf90_redef(this%f_id), &
+         "Redef definition segment in file: "//this)
   end subroutine ncdf_redef
 
 ! ################################################################
@@ -1411,11 +1468,14 @@ contains
     type(hNCDF), intent(in out) :: this
     character(len=*), intent(in) :: name
     type(hNCDF), intent(out) :: grp
-    
-    if ( .not. ncdf_participate(this) ) return
 
     ! Copy the information regarding the parent ncdf
+    ! We need to do this out-side (as the information
+    ! required to denote the owner of the file)
     call ncdf_copy(this,grp)
+    
+    if ( .not. ncdf_participate(grp) ) return
+
     ! Save the group name... (we save it with hiercharal notice /"grp1"/"grp2")
     grp%grp = trim(grp%grp)//"/"//trim(name)
     ! Create the group and return
@@ -1466,7 +1526,7 @@ contains
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
-    type(hNCDF), intent(in) :: this
+    type(hNCDF), intent(inout) :: this
     integer :: ndims,nvars,ngatts,file_format,ngrps
     integer :: Node,Nodes
 #ifdef NCDF_PARALLEL

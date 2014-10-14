@@ -24,6 +24,7 @@ LIBVARDICT= ../lib/fvar/libvardict.a
 .PHONY: all
 
 TESTS= tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
+.PHONY: $(TESTS)
 all: $(LIB_TST) $(TESTS)
 
 tst_ncdf_3: tst_ncdf_3.o
