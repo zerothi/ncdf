@@ -1,6 +1,10 @@
 #!/bin/bash
 
-var_dir=../lib/fvar
+if [ -z "$DIR_FVAR" ]; then
+    var_dir=../lib/fvar
+else
+    var_dir=$DIR_FVAR
+fi
 source $var_dir/settings.sh
 [ -e $var_dir/current_settings.sh ] && source $var_dir/current_settings.sh
 
