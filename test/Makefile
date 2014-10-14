@@ -1,36 +1,45 @@
 .SUFFIXES: .F90 .f90 .o .a
 include ../arch.make
 
+# Setup the default things, in case they haven't been set.
+AR         ?= ar
+ARFLAGS    ?= cru
+RANLIB     ?= ranlib
+LIBVARDICT ?= ../lib/fvar/libvardict.a
+
+# The VPATH can be different, however the tree-structure
+# has to be the same in this case.
+VPATH?=$(shell pwd)
+
 .PHONY: default
 default: all
 
 # library for tests
 TST_UTILS = tst_ncdf_utils.o
-LIB_TST = libtst.a
+LIB_TST   = libtst.a
 
 $(LIB_TST): $(TST_UTILS)
 	$(AR) $(ARFLAGS) $(LIB_TST) $(TST_UTILS)
 	$(RANLIB) $(LIB_TST)
 
 # The different libraries
-OBJS= test_ncdf.o
+OBJS = test_ncdf.o
 
-INC += -I../lib/fvar
+LIB = ../src/libncdf.a $(LIB_TST)
+
+# We need the local installation mods
 INC += -I../src
-
-LIB= ../src/libncdf.a $(LIB_TST)
-LIBVARDICT= ../lib/fvar/libvardict.a
 
 .PHONY: all
 
-TESTS= tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
+TESTS = tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
 .PHONY: $(TESTS)
 all: $(LIB_TST) $(TESTS)
 
 tst_ncdf_3: tst_ncdf_3.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
 	./$@
-	#mpirun -np 2 ./$@
+#mpirun -np 2 ./$@
 
 tst_ncdf_4: tst_ncdf_4.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
