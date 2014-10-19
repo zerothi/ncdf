@@ -10,6 +10,7 @@ program tst_ncdf_3
   integer :: Node, Nodes, i
   character(len=1) :: ci
   type(dict) :: dic
+  logical :: assert
 
   call tst_mpi_init(Node,Nodes)
 
@@ -50,8 +51,21 @@ program tst_ncdf_3
      end if
   end do
 
+  ! We assert that the dimensions exist
+  dic = ('x'.kv.1)//('y'.kv.10)
+  call ncdf_assert(ncdf,assert,dims=dic)
+  call delete(dic)
+  if ( .not. assert ) then
+     write(*,*) 'ASSERTION NOT FULFILLED'
+  else
+     write(*,*) 'Fulfilled assertion...'
+  end if
+
   call ncdf_close(ncdf)
   call check_nc(''//ncdf)
+
+  
+  
 
 #ifdef NCDF_PARALLEL
   call MPI_Finalize(Nodes)

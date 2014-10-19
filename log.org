@@ -4,6 +4,24 @@
 
 Every section in this part lists the change of the versions
 
+** Added ncdf_assert <2014-10-19 Sun>
+Routine for checking content of NetCDF files has been implemented
+Currently it allows checking for the existance/values of
+  - i0,i1,i2
+  - s1,s2
+  - d1,d2
+It can be called using this interface:
+   ncdf_assert(ncdf,assert,dims=<dict>,vars=<dict>, &
+     has_dims=<dict>,has_vars=<dict>)
+The has_[dims|vars] simply checks for existance.
+The [dims|vars] checks their existance AND the value that
+resides in the dictionary.
+Optionally one can pass a [s|d]_EPS flag to determine 
+tolerance levels of similarity, for integers we only assert
+completely the same.
+
+Added usage of ncdf_assert in tst_ncdf_[34]
+
 ** Enabled opening of groups from ncdf <2014-10-14 Tue>
 The opening of groups could before only be done using the regular
 ncdf_open construct.

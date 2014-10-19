@@ -531,7 +531,6 @@ contains
     integer :: ldims, lvars, latts, lformat, lgrps, val, i
     integer, allocatable :: grp_id(:)
     character(len=NF90_MAX_NAME) :: key
-    
 
     if ( .not. ncdf_participate(this) ) return
 
@@ -614,6 +613,212 @@ contains
     call ncdf_close(this)
 
   end subroutine ncdf_inq_name
+
+  ! Routine to assert that a NetCDF file has
+  ! certain dimensions, attributes, and variables.
+  ! There exists two interfaces for figuring out the 
+  !  dims/vars
+  ! and 
+  !  has_dims/has_vars
+  ! The former checks dimensions and their values.
+  ! The latter only checks if they exist in the
+  ! file.
+  subroutine ncdf_assert(this,assert,dims,vars, &
+       has_dims,has_vars,s_EPS,d_EPS)
+    use variable
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    logical, intent(out) :: assert
+    type(dict), intent(in), optional ::     dims,     vars
+    type(dict), intent(in), optional :: has_dims, has_vars
+    real(sp), intent(in), optional :: s_EPS
+    real(dp), intent(in), optional :: d_EPS
+    ! We currently do not check attributes.
+    ! This is a little more tricky as strings, chars, etc... :(
+    ! It just needs to be done...
+
+    ! We can currently only check integers :(
+    character(len=DICT_KEY_LENGTH) :: key
+    character(len=2) :: t
+    type(dict) :: dic ! local loop dictionary...
+    type(var) :: ivar
+    logical :: success
+    integer, pointer :: i1(:), i2(:,:)
+    integer, allocatable :: i1a(:), i2a(:,:)
+    ! We will also allow comparison of single/doubles
+    real(sp) :: ls_EPS
+    real(sp), pointer :: s1(:), s2(:,:)
+    real(sp), allocatable :: s1a(:), s2a(:,:)
+    real(dp) :: ld_EPS
+    real(dp), pointer :: d1(:), d2(:,:)
+    real(dp), allocatable :: d1a(:), d2a(:,:)
+    integer :: i, i0
+
+    assert = .true.
+    if ( .not. ncdf_participate(this) ) return
+
+    if ( present(dims) ) then
+
+       ! We check the dimensions of the file
+       dic = .first. dims
+       do while ( .not. (.empty. dic) )
+          key = .key. dic
+
+          ! Check that the dimension exists
+          call ncdf_inq_dim(this,key,exist=assert)
+          if ( .not. assert ) exit
+
+          ! Get the value in the dictionary
+          ivar = .valp. dic
+          call assign(i0,ivar,success=assert)
+          if ( .not. success ) then
+             ! Error in type of dictionary...
+             call ncdf_err(-100, &
+                  'Request of dimension in ncdf_assert &
+                  &went wrong, the dimension is not an integer.')
+          end if
+
+          ! Now find the dimension size
+          call ncdf_inq_dim(this,key,len=i)
+
+          ! Now we can actually check it...
+          assert = ( i == i0 )
+          if ( .not. assert ) exit
+
+          dic = .next. dic
+       end do
+
+       ! Clean up... (the variable allocates the "enc")
+       call delete(ivar,dealloc=.false.)
+
+       if ( .not. assert ) return
+
+    end if
+
+    if ( present(vars) ) then
+
+       ! We retrieve the epsilon for check
+       ls_EPS = 1.e-6_sp
+       if ( present(s_EPS) ) ls_EPS = s_EPS
+       ld_EPS = 1.e-6_dp
+       if ( present(d_EPS) ) ld_EPS = d_EPS
+
+       ! We check the dimensions of the file
+       dic = .first. vars
+       do while ( .not. (.empty. dic) )
+          key = .key. dic
+          
+          ! Check that the variable exists
+          call ncdf_inq_var(this,key,exist=assert)
+          if ( .not. assert ) exit
+
+          ! Get the value in the dictionary
+          ivar = .valp. dic
+          t = which(ivar)
+          select case ( t )
+          case ( 'i0' )
+             call assign(i0,ivar,success=success)
+          case ( 'i1' )
+             call associate(i1,ivar,success=success)
+          case ( 'i2' )
+             call associate(i2,ivar,success=success)
+          case ( 's1' )
+             call associate(s1,ivar,success=success)
+          case ( 's2' )
+             call associate(s2,ivar,success=success)
+          case ( 'd1' )
+             call associate(d1,ivar,success=success)
+          case ( 'd2' )
+             call associate(d2,ivar,success=success)
+          case default
+             success = .false.
+          end select
+          if ( .not. success ) then
+             ! Error in type of dictionary...
+             call ncdf_err(-100, &
+                  'Request of variable in input vars in ncdf_assert &
+                  &went wrong, the variable is not [i0,i1,i2,s1,s2,d1,d2].')
+          end if
+
+          ! Now grab the first elements of the variable
+          ! First we need to allocate the read in data
+          ! array
+          select case ( t )
+          case ( 'i0' )
+             call ncdf_get_var(this,key,i)
+             assert = ( i == i0 )
+          case ( 'i1' )
+             allocate(i1a(size(i1)))
+             call ncdf_get_var(this,key,i1a)
+             assert = all( i1 == i1a )
+             deallocate(i1a)
+          case ( 'i2' )
+             allocate(i2a(size(i2,dim=1),size(i2,dim=2)))
+             call ncdf_get_var(this,key,i2a)
+             assert = all( i2 == i2a )
+             deallocate(i2a)
+          case ( 's1' )
+             allocate(s1a(size(s1)))
+             call ncdf_get_var(this,key,s1a)
+             assert = all( abs(s1 - s1a) <= ls_EPS )
+             deallocate(s1a)
+          case ( 's2' )
+             allocate(s2a(size(s2,dim=1),size(s2,dim=2)))
+             call ncdf_get_var(this,key,s2a)
+             assert = all( abs(s2 - s2a) <= ls_EPS )
+             deallocate(s2a)
+          case ( 'd1' )
+             allocate(d1a(size(d1)))
+             call ncdf_get_var(this,key,d1a)
+             assert = all( abs(d1 - d1a) <= ld_EPS )
+             deallocate(d1a)
+          case ( 'd2' )
+             allocate(d2a(size(d2,dim=1),size(d2,dim=2)))
+             call ncdf_get_var(this,key,d2a)
+             assert = all( abs(d2 - d2a) <= ld_EPS )
+             deallocate(d2a)
+          end select
+
+          ! no success...
+          if ( .not. assert ) exit
+
+          dic = .next. dic
+       end do
+
+       ! Clean up...
+       call delete(ivar,dealloc=.false.)
+
+       if ( .not. assert ) return
+
+    end if
+
+    if ( present(has_dims) ) then
+
+       ! We check the dimensions of the file
+       dic = .first. has_dims
+       do while ( .not. (.empty. dic) )
+          key = .key. dic
+          call ncdf_inq_dim(this,key,exist=assert)
+          if ( .not. assert ) return
+          dic = .next. dic
+       end do
+
+    end if
+
+    if ( present(has_vars) ) then
+
+       dic = .first. has_vars
+       do while ( .not. (.empty. dic) )
+          key = .key. dic
+          call ncdf_inq_var(this,key,exist=assert)
+          if ( .not. assert ) exit
+          dic = .next. dic
+       end do
+
+    end if
+
+  end subroutine ncdf_assert
+
     
 ! Simplify the addition of any dimension
   subroutine ncdf_def_dim(this,name,size)

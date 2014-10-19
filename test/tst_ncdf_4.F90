@@ -12,6 +12,7 @@ program tst_ncdf_4
   type(hNCDF) :: ncdf, grp1, grp2
   integer :: Node, Nodes, i, comp_lvl
   type(dict) :: dic
+  logical :: assert
 
   call tst_mpi_init(Node,Nodes)
 
@@ -76,6 +77,32 @@ program tst_ncdf_4
         call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
      end if
   end do
+
+  ! We assert that the dimensions exist
+  dic = ('x'.kv.1)//('y'.kv.10)//('z'.kv.2)
+  call ncdf_assert(ncdf,assert,dims=dic)
+  if ( .not. assert ) then
+     write(*,*) 'ASSERTION NOT FULFILLED'
+  else
+     write(*,*) 'Fulfilled assertion...'
+  end if
+
+  ! Groups inherit "unknown" dimensions from their
+  ! parent. Hence we just check them also
+  dic = dic // ('N'.kv.Nodes * 2)
+  call ncdf_assert(grp1,assert,dims=dic)
+  if ( .not. assert ) then
+     write(*,*) 'ASSERTION NOT FULFILLED, grp1'
+  else
+     write(*,*) 'Fulfilled assertion..., grp1'
+  end if
+  call ncdf_assert(grp2,assert,dims=dic)
+  call delete(dic)
+  if ( .not. assert ) then
+     write(*,*) 'ASSERTION NOT FULFILLED, grp2'
+  else
+     write(*,*) 'Fulfilled assertion..., grp2'
+  end if
   
   call ncdf_close(ncdf)
   call check_nc(''//ncdf)
