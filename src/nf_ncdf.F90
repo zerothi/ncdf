@@ -466,6 +466,216 @@ contains
 
   end subroutine ncdf_open
 
+  ! A specific routine for generating a NetCDF file
+  ! group based on a dictionary input.
+  recursive subroutine ncdf_crt(this,dic)
+    use variable
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    type(dict), intent(inout) :: dic
+    
+    ! Local dictionary keys and variables
+    type(hNCDF) :: grp
+    type(dict) :: d, d_var, dv, atts
+    type(var) :: v
+    character(len=DICT_KEY_LENGTH) :: key
+    character(len=NF90_MAX_NAME) :: name, char
+    character(len=50), allocatable :: dims(:)
+    integer, pointer :: chunks(:) => null()
+    integer :: d_n, type, i, n_d, j
+    ! Type declarations
+    integer :: itype
+    logical :: ltype
+
+    if ( .not. ncdf_participate(this) ) return
+
+    ! Create all dimensions
+    d = .first. dic
+    do while ( .not. (.empty. d) )
+       key = .key. d
+       if ( key(1:3) == 'DIM' ) then
+          key = key(4:)
+          ! We have a dimension
+          ! { DIMname : <size> }
+          ! 1. Get value
+          call associate(v,d)
+          ! 2. Assign value
+          call assign(d_n,v)
+          call ncdf_def_dim(this,key,d_n)
+          ! 3. just nullify the variable, let the user delete
+          ! the dictionary, we cannot know whether the 
+          ! variable is a pointer.
+          call nullify(v)
+       end if
+       d = .next. d
+    end do 
+
+    ! Create all variables
+    d = .first. dic
+    do while ( .not. (.empty. d) )
+       key = .key. d
+       if ( key(1:3) == 'VAR' ) then
+          name = key(4:)
+          !print *,'Creating variable: ',trim(key)
+          ! We have a variable
+          ! { VARname : <dict> } dict ->
+          ! { 
+          !   dims : '1st,2nd,3rd', ! Comma-seperated list
+          !   type : NF90_INT|NF90_FLOAT|..., ! Integer, or logical for complex
+          !   atts : <dict>, ! Dictionary of attributes.
+          !   chunks : <array of int>, ! For specifying chunk-sizes
+          ! }
+          call associate(d_var,d)
+          !call print(d_var)
+
+          ! We have the dictionary of the variable
+
+          ! 0. in case 'name' exists, it must be the name
+          if ( 'name'.in.d_var ) then
+             call associate(v,d_var,'name')
+             if ( which(v) /= 'V0' ) then
+                call ncdf_err(-200, &
+                     'ncdf_crt: Name of variable is not a character variable.')
+             end if
+             name = ' '
+             call assign(name,v)
+          end if
+          
+          ! 1. Get the dimensions
+          if ( 'dims'.nin. d_var ) then
+             call ncdf_err(-200, &
+                  'ncdf_crt: Unable to retrieve the dimension &
+                  &key from a variable dictionary. A variable &
+                  &MUST be defined with a comma separated dimension.')
+          end if
+          !print *,'Retrieve dims (1): ',trim(key)
+          call associate(v,d_var,'dims')
+          ! The dimensions has to be given in a comma separated list
+          if ( which(v) /= 'V0' ) then
+             call ncdf_err(-200, &
+                  'ncdf_crt: Dimension variable is not a character variable.')
+          end if
+          ! Ensure we have a completely empty character.
+          !print *,'Retrieve dims (2): ',trim(key)
+          key = ' '
+          call assign(key,v)
+          ! Count number of dimensions
+          n_d = 1
+          do i = 1 , len_trim(key)
+             if ( key(i:i) == ',' ) then
+                n_d = n_d + 1
+             end if
+          end do
+          allocate(dims(n_d))
+          ! Copy over the dimensions
+          j = 1
+          n_d = 1
+          do i = 2 , len_trim(key)
+             if ( key(i:i) == ',' ) then
+                dims(n_d) = ' '
+                dims(n_d) = trim(adjustl(key(j:i-1)))
+                n_d = n_d + 1
+                j = i + 1
+             end if
+          end do
+          ! Grab the last dimension
+          dims(n_d) = trim(adjustl(key(j:)))
+
+
+          ! Figure out the type
+          if ( 'type' .nin. d_var ) then
+             call ncdf_err(-200, &
+                  'ncdf_crt: Unable to retrieve the type &
+                  &key from a variable dictionary. A variable &
+                  &MUST have a clear type.')
+          end if
+          !print *,'Retrieve type: ',trim(key)
+          call associate(v,d_var,'type')
+          char = which(v)
+          if ( trim(char) /= 'b0' .and. &
+               trim(char) /= 'i0' ) then
+             call ncdf_err(-200, &
+                  'ncdf_crt: Type of variable is not defined with a &
+                  &proper variable designator.')
+          end if
+          if ( trim(char) == 'i0' ) then
+             call assign(itype,v)
+          else
+             call assign(ltype,v)
+          end if
+          
+          ! Check if there are any attributes in the dictionary
+          if ( 'atts' .in. d_var ) then
+             call associate(atts,d_var,'atts')
+          end if
+
+          ! We have now gathered all information.
+          ! Lets create that variable, alrighty! :)
+          if ( trim(char) == 'i0' ) then
+             call ncdf_def_var(this,name,itype, &
+                  dims=dims,atts=atts)
+          else
+             call ncdf_def_var(this,name,ltype, &
+                  dims=dims,atts=atts)
+          end if
+
+          deallocate(dims)
+          call nullify(atts)
+          call nullify(v)
+          call nullify(d_var)
+
+       else if ( key(1:5) == 'GROUP' ) then
+          name = key(6:) ! default name
+          if ( 'name' .in. d_var ) then
+             call associate(v,d_var,'name')
+             name = ' '
+             call assign(name,v)
+          end if
+
+          call ncdf_def_grp(this,name,grp)
+          call associate(d_var,d)
+          call ncdf_crt(grp,d_var)
+          call nullify(d_var)
+
+       end if
+       d = .next. d
+    end do 
+
+  end subroutine ncdf_crt
+
+  ! Handy routine for completely deleting a
+  ! dictionary containing a "construction" dictionary
+  ! for NetCDF files.
+  recursive subroutine ncdf_crt_delete(dic)
+    use dictionary
+    type(dict), intent(inout) :: dic
+    type(dict) :: ld, v_dic, att_dic
+    character(len=DICT_KEY_LENGTH) :: key
+
+    ! Delete all entries
+    ld = .first. dic
+    do while ( .not. (.empty.ld) )
+       key = .key. ld
+       if ( key(1:3) == 'VAR' ) then
+          call associate(v_dic,ld)
+          if ( 'atts'.in.v_dic ) then
+             call associate(att_dic,v_dic)
+             call delete(att_dic)
+          end if
+          call delete(v_dic)
+       else if ( key(1:5) == 'GROUP' ) then
+          call associate(v_dic,ld)
+          ld = .next. ld
+          call ncdf_crt_delete(v_dic)
+          cycle
+       end if
+       ld = .next. ld
+    end do
+
+    call delete(dic)
+    
+  end subroutine ncdf_crt_delete
+
   subroutine ncdf_par_access(this,name,access)
     type(hNCDF), intent(inout) :: this
     character(len=*), intent(in), optional :: name
@@ -614,6 +824,50 @@ contains
 
   end subroutine ncdf_inq_name
 
+  subroutine ncdf_inq_grp(this,group,exist,dims,vars,atts,format,grps, &
+       dict_dim, dict_att)
+    use dictionary
+    type(hNCDF), intent(inout) :: this
+    character(len=*), intent(in) :: group
+    logical, optional, intent(out) :: exist
+    integer, optional, intent(out) :: dims, vars, atts, format, grps
+    ! possibly obtain all attributes, dimensions
+    type(dict), optional, intent(inout) :: dict_dim, dict_att
+
+    integer :: ldims, lvars, latts, lformat, lgrps, val, i
+    integer, allocatable :: grp_id(:)
+    character(len=NF90_MAX_NAME) :: key
+    type(hNCDF) :: grp
+
+    if ( .not. ncdf_participate(this) ) return
+
+    if ( present(exist) ) then
+       i = nf90_inq_grp_ncid(this%id,group,val)
+       if ( i == NF90_NOERR ) then
+          exist = .true.
+       else if ( i == NF90_ENOGRP ) then
+          exist = .false.
+       else
+          call ncdf_err(i, &
+               'Inquiring group information'//this)
+       end if
+
+       if ( exist ) then
+          ! We can fetch the other information
+          call ncdf_open_grp(this,group,grp)
+          call ncdf_inq(grp,dims=dims,vars=vars,atts=atts,format=format, &
+               grps=grps,dict_dim=dict_dim,dict_att=dict_att)
+       end if
+
+       return
+    end if
+
+    call ncdf_open_grp(this,group,grp)
+    call ncdf_inq(grp,dims=dims,vars=vars,atts=atts,format=format, &
+         grps=grps,dict_dim=dict_dim,dict_att=dict_att)
+    
+  end subroutine ncdf_inq_grp
+
   ! Routine to assert that a NetCDF file has
   ! certain dimensions, attributes, and variables.
   ! There exists two interfaces for figuring out the 
@@ -670,13 +924,15 @@ contains
 
           ! Get the value in the dictionary
           ivar = .valp. dic
-          call assign(i0,ivar,success=assert)
+          call assign(i0,ivar,success=success)
           if ( .not. success ) then
              ! Error in type of dictionary...
              call ncdf_err(-100, &
                   'Request of dimension in ncdf_assert &
                   &went wrong, the dimension is not an integer.')
           end if
+
+          call nullify(ivar)
 
           ! Now find the dimension size
           call ncdf_inq_dim(this,key,len=i)
@@ -689,7 +945,7 @@ contains
        end do
 
        ! Clean up... (the variable allocates the "enc")
-       call delete(ivar,dealloc=.false.)
+       call nullify(ivar)
 
        if ( .not. assert ) return
 
@@ -739,6 +995,9 @@ contains
                   'Request of variable in input vars in ncdf_assert &
                   &went wrong, the variable is not [i0,i1,i2,s1,s2,d1,d2].')
           end if
+          ! Do not deallocate the dictionary stuff
+          call nullify(ivar)
+
 
           ! Now grab the first elements of the variable
           ! First we need to allocate the read in data
@@ -778,7 +1037,7 @@ contains
              assert = all( abs(d2 - d2a) <= ld_EPS )
              deallocate(d2a)
           end select
-
+          
           ! no success...
           if ( .not. assert ) exit
 
@@ -786,7 +1045,7 @@ contains
        end do
 
        ! Clean up...
-       call delete(ivar,dealloc=.false.)
+       call nullify(ivar)
 
        if ( .not. assert ) return
 
@@ -811,7 +1070,7 @@ contains
        do while ( .not. (.empty. dic) )
           key = .key. dic
           call ncdf_inq_var(this,key,exist=assert)
-          if ( .not. assert ) exit
+          if ( .not. assert ) return
           dic = .next. dic
        end do
 
@@ -1337,6 +1596,8 @@ contains
     type(var)  :: at_var
     character(len=NF90_MAX_NAME) :: key
 
+    if ( len(atts) == 0 ) return
+
     att = .first. atts
     att_loop: do 
        if ( .empty. att ) exit att_loop
@@ -1354,6 +1615,8 @@ contains
        att = .next. att
 
     end do att_loop
+    ! clean-up encoding
+    call nullify(at_var)
 
     ! If the user adds this key, the dictionary will be deleted
     ! after usage...

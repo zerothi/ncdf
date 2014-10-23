@@ -4,6 +4,34 @@
 
 Every section in this part lists the change of the versions
 
+** Added ncdf_crt <2014-10-23 Thu>
+Added the possibility of creating a NetCDF file purely based
+on a dictionary.
+Creating a dictionary like:
+  { DIMx : 2,
+    DIMy : 3,
+    VARxa : {
+      type : NF90_INT,
+      dims : "x,y",
+      atts : { },
+      chunks : <list of ints>,
+    },
+    VARya : {
+      type : NF90_INT,
+      dims : "x,y",
+      atts : { },
+      chunks : <list of ints>,
+    },
+    GROUPleft : {
+      { < a dictionary just like the top level dict. > }
+    },
+  }
+Added test to show-case this.
+
+** Bugfix for ncdf_assert <2014-10-23 Thu>
+Checking dimensions sizes used an erroneous logical to check.
+Changed delete(,dealloc=.false.) to nullify.
+
 ** Added ncdf_assert <2014-10-19 Sun>
 Routine for checking content of NetCDF files has been implemented
 Currently it allows checking for the existance/values of
