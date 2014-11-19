@@ -1,15 +1,20 @@
 #!/bin/bash
 
+_vpath=.
+if [ ! -z "$VPATH" ]; then
+    _vpath=$VPATH
+fi
+
 if [ -z "$DIR_FVAR" ]; then
-    var_dir=../lib/fvar
+    var_dir=$_vpath/../lib/fvar
 else
-    var_dir=$DIR_FVAR
+    var_dir=$_vpath/$DIR_FVAR
 fi
 source $var_dir/settings.sh
 [ -e $var_dir/current_settings.sh ] && source $var_dir/current_settings.sh
 
 # Override any special settings in this file
-[ -e settings.sh ] && source settings.sh
+[ -e $_vpath/settings.sh ] && source $_vpath/settings.sh
 
 # The different variable types used in this (long does not exist)
 vars=(h s d c z i)

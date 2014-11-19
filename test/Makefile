@@ -8,6 +8,7 @@ include $(ARCH_MAKE)
 AR         ?= ar
 ARFLAGS    ?= cru
 RANLIB     ?= ranlib
+PP         ?= cpp -E -P -C
 LIBVARDICT ?= ../lib/fvar/libvardict.a
 
 # The VPATH can be different, however the tree-structure

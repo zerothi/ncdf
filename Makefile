@@ -12,11 +12,11 @@ include $(ARCH_MAKE)
 default: all
 
 .PHONY: all
-all: ncdf
+all: lib
 	@echo Done with everything
 
-.PHONY: ncdf
-ncdf:
+.PHONY: lib
+lib:
 ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
@@ -25,7 +25,7 @@ endif
 	(cd src ; make "VPATH=$(VPATH)/src" lib)
 
 .PHONY: test
-test: ncdf
+test: lib
 	(cd test ; make "VPATH=$(VPATH)/test" all)
 
 .PHONY: clean

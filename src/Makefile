@@ -1,5 +1,9 @@
 .SUFFIXES: .f90 .o .a
 
+# The VPATH can be different, however the tree-structure
+# has to be the same in this case.
+VPATH?=$(shell pwd)
+
 ARCH_MAKE_DEFAULT=../arch.make
 ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
 include $(ARCH_MAKE)
@@ -8,11 +12,8 @@ include $(ARCH_MAKE)
 AR         ?= ar
 ARFLAGS    ?= cru
 RANLIB     ?= ranlib
+PP         ?= cpp -E -P -C
 LIBVARDICT ?= ../lib/fvar/libvardict.a
-
-# The VPATH can be different, however the tree-structure
-# has to be the same in this case.
-VPATH?=$(shell pwd)
 
 .PHONY: default
 default: lib
@@ -38,8 +39,8 @@ s/"endif"/\n\#endif/g'
 .PHONY: prep
 prep:
 	$(VPATH)/ncdf.sh
-	$(PP) -I$(VPATH) -I. $(VPATH)/nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
-	$(PP) -I$(VPATH) -I. tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
+	$(PP) -I. -I$(VPATH) $(VPATH)/nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) -I. -I$(VPATH) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
 
 .PHONY: clean
 clean:
