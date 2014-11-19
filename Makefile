@@ -1,7 +1,10 @@
-include arch.make
 
 # Set the default VPATH
 VPATH?=$(shell pwd)
+
+ARCH_MAKE_DEFAULT=arch.make
+ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
+include $(ARCH_MAKE)
 
 # We need to assure that libvardict.a is existing
 
