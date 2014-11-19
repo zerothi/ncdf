@@ -8,7 +8,7 @@ fi
 if [ -z "$DIR_FVAR" ]; then
     var_dir=$_vpath/../lib/fvar
 else
-    var_dir=$_vpath/$DIR_FVAR
+    var_dir=$DIR_FVAR
 fi
 source $var_dir/settings.sh
 [ -e $var_dir/current_settings.sh ] && source $var_dir/current_settings.sh
