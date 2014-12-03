@@ -48,12 +48,15 @@ program tst_ncdf_4
 
   call ncdf_def_grp(ncdf,'info',grp1)
   call ncdf_def_dim(grp1,'N',Nodes*2)
+  call ncdf_def_dim(grp1,'Np1',Nodes*2+1)
   call ncdf_def_var(grp1,'Nodes',NF90_INT,(/'N'/))
-  call ncdf_default(ncdf,access=NF90_COLLECTIVE)
+  call ncdf_def_var(grp1,'Inde',NF90_INT,(/'Np1'/))
+  call ncdf_default(grp1,access=NF90_COLLECTIVE)
+  call ncdf_par_access(grp1,name='Inde',access=NF90_INDEPENDENT)
   call ncdf_def_grp(grp1,'scndlevel',grp2)
   call ncdf_def_dim(grp2,'N',Nodes*2)
   call ncdf_def_var(grp2,'Nodes',NF90_INT,(/'N'/))
-  call ncdf_default(ncdf,access=NF90_COLLECTIVE)
+  call ncdf_default(grp2,access=NF90_COLLECTIVE)
 
   ! print out the leveled netcdf
   call ncdf_print(ncdf)
@@ -64,6 +67,12 @@ program tst_ncdf_4
      if ( mod(i,Nodes) == Node ) then
         call ncdf_put_var(grp1,'Nodes',i,start=(/i/))
         call ncdf_put_var(grp2,'Nodes',i,start=(/i/))
+     end if
+  end do
+
+  do i = 1 , Nodes * 2 + 1
+     if ( mod(i,Nodes) == Node ) then
+        call ncdf_put_var(grp1,'Inde',i,start=(/i/))
      end if
   end do
 

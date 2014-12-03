@@ -405,13 +405,13 @@ contains
 
   end subroutine ncdf_create
 
-  subroutine ncdf_open(this,filename,groupname,mode,parallel,comm,compress_lvl)
+  subroutine ncdf_open(this,filename,group,mode,parallel,comm,compress_lvl)
 #ifdef NCDF_PARALLEL
     use mpi, only : MPI_INFO_NULL
 #endif
     type(hNCDF),    intent(inout)   :: this 
     character(len=*), intent(in) :: filename
-    character(len=*), optional, intent(in) :: groupname
+    character(len=*), optional, intent(in) :: group
     integer, optional, intent(in) :: mode
     logical, optional, intent(in) :: parallel
     integer, optional, intent(in) :: comm
@@ -459,8 +459,8 @@ contains
     ! Copy so that we can create inquiry
     this%id = this%f_id
     
-    if ( present(groupname) ) then
-       this%grp = '/'//trim(groupname)
+    if ( present(group) ) then
+       this%grp = '/'//trim(group)
        call ncdf_err(nf90_inq_grp_full_ncid(this%f_id, trim(this%grp), this%id))
     end if
 
@@ -1857,17 +1857,18 @@ contains
     ! A NetCDF4 file still needs to define/redefine
     ! in collective manner, yet it is taken care of
     ! internally.
+    if ( this%define < 0 ) return
     if ( this%define == 1 ) return
     this%define = 1
     if ( .not. ncdf_participate(this) ) return
-    i = nf90_enddef(this%f_id)
+    i = nf90_enddef(this%id)
     if ( i == nf90_noerr ) return
     if ( i == nf90_enotindefine ) then
        ! we pass, the not-in-define mode
        ! just tells us that we are already in data-mode
        return
     end if
-    call ncdf_err(i, "End definition segment of file: "//this)
+    call ncdf_err(i,"End definition segment of file: "//this)
 
   end subroutine ncdf_enddef
 
@@ -1883,19 +1884,19 @@ contains
   subroutine ncdf_redef(this)
     type(hNCDF), intent(inout) :: this
     integer :: i
+    if ( this%define < 0 ) return
     ! Already in define mode:
     if ( this%define == 0 ) return
     this%define = 0
     if ( .not. ncdf_participate(this) ) return
-    i = nf90_redef(this%f_id)
+    i = nf90_redef(this%id)
     if ( i == nf90_noerr ) return
     if ( i == nf90_eindefine ) then
        ! we pass, the in-define mode
        ! just tells us that we are already in define-mode
        return
     end if
-    call ncdf_err(i, &
-         "Redef definition segment in file: "//this)
+    call ncdf_err(i,"Redef definition segment in file: "//this)
   end subroutine ncdf_redef
 
 ! ################################################################
@@ -2004,18 +2005,18 @@ contains
   function cat_char_ncdf(char,this) result(cat)
     character(len=*), intent(in) :: char
     type(hNCDF), intent(in) :: this
-    character(len=len(char)+len_trim(this%name)) :: cat
-    cat = char//trim(this%name)
+    character(len=len(char)+len_trim(this%grp)) :: cat
+    cat = char//trim(this%grp)
   end function cat_char_ncdf
 
   function cat_ncdf_char(this,char) result(cat)
     type(hNCDF), intent(in) :: this
     character(len=*), intent(in) :: char
-    character(len=len(char)+len_trim(this%name)) :: cat
-    cat = trim(this%name)//char
+    character(len=len(char)+len_trim(this%grp)) :: cat
+    cat = trim(this%grp)//char
   end function cat_ncdf_char
 
-  subroutine ncdf_IONode(io_Node)
+  subroutine ncdf_IONode(IO_Node)
     logical, intent(in) :: IO_Node
     IONode = IO_Node
   end subroutine ncdf_IONode
