@@ -1213,7 +1213,7 @@ contains
     call ncdf_err(iret,"Defining variable: "//trim(name)//" in file: "//this)
 
 #ifdef NCDF_4
-    if ( present(chunks) ) then
+    if ( present(chunks) .and. .not. parallel_io(this) ) then
        ! Set the chunking
        ldims = 1
        do i = 1 , min(size(chunks),size(dims))
