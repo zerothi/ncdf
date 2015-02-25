@@ -31,7 +31,7 @@ test: lib
 .PHONY: clean
 clean:
 ifndef LIBVARDICT
-	(cd lib/fvar ; make clean)
+	@if [ -d lib/fvar ]; then (cd lib/fvar ; make clean) ; fi
 endif
 	(cd src ; make clean)
 	(cd test ; make clean)
