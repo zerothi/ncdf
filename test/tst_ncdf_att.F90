@@ -5,6 +5,8 @@ program tst_ncdf
 
   implicit none
 
+  character(len=30) :: fname
+
   type(hNCDF) :: ncdf
   integer :: Node, Nodes, i
   type(dict) :: dic, ld
@@ -17,10 +19,12 @@ program tst_ncdf
 
   ! Create the netcdf-file
   if ( Nodes > 1 ) then
+     fname = 'NCDF_par_3.nc'
      call ncdf_create(ncdf,'NCDF_par_3.nc',&
           mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET), &
           overwrite=.true., comm=MPI_Comm_World)
   else
+     fname = 'NCDF_seq_3.nc'
      call ncdf_create(ncdf,'NCDF_seq_3.nc',&
           mode=NF90_64BIT_OFFSET, overwrite=.true.)
   end if
@@ -103,7 +107,8 @@ program tst_ncdf
   
   call ncdf_close(ncdf)
 
-  
+  call check_nc(fname)
+
 #ifdef NCDF_PARALLEL
   call MPI_Finalize(Nodes)
 #endif

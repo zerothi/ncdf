@@ -5,7 +5,7 @@ subroutine ROUTINE2(put_gatt,VAR)(this, name, att)
   character(len=*), intent(in) :: name
   VAR_TYPE, intent(in)DIMS :: att
   if ( .not. ncdf_participate(this) ) return
-  call ncdf_redef(this)
+  if (this%define > -1 ) call ncdf_redef(this)
   call ncdf_err(nf90_put_att(this%id, NF90_GLOBAL, name, att), &
        'Saving global (VAR) attribute: '//trim(name)//' in file: '//this)
 end subroutine ROUTINE2(put_gatt,VAR)
@@ -16,7 +16,7 @@ subroutine ROUTINE2(put_att,VAR)(this, var, name, att)
   VAR_TYPE, intent(in)DIMS :: att
   integer :: id
   if ( .not. ncdf_participate(this) ) return
-  call ncdf_redef(this)
+  if (this%define > -1 ) call ncdf_redef(this)
   call ncdf_err(nf90_inq_varid(this%id, trim(var), id), &
               'Retrieving id from (VAR) '//trim(var)//' : '//trim(name)//' in file: '//this)
   call ncdf_err(nf90_put_att(this%id, id, name, att), &

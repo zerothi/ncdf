@@ -85,6 +85,8 @@ contains
           call system('ncdump -v v '//file)
           call system('ncdump -k '//file)
        end if
+    else if ( Node == 0 ) then
+       write(*,'(a)')'File: '//trim(file)//' does not exist!'
     end if
   end subroutine check_nc
 

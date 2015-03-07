@@ -45,7 +45,7 @@ all: $(LIB_TST) $(TESTS)
 tst_ncdf_3: tst_ncdf_3.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
 	./$@
-#mpirun -np 2 ./$@
+	mpirun -np 2 ./$@
 
 tst_ncdf_4: tst_ncdf_4.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
@@ -61,7 +61,6 @@ tst_ncdf_att: tst_ncdf_att.o
 tst_ncdf_crt: tst_ncdf_crt.o
 	$(FC) -o $@ $(FFLAGS) $^ $(LIB) $(LIBVARDICT) $(LDFLAGS)
 	./$@
-
 
 .PHONY: clean
 clean:

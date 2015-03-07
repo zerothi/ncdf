@@ -109,7 +109,8 @@ module nf_ncdf
      logical            :: parallel = .false.
      ! The mode of the file
      integer            :: mode
-     ! If define < 0, then no enddef, or redefs will be performed
+     ! If define < 0, then it is a netCDF-4 file, enddef will only
+     !                be called if ncdf_enddef is called
      ! If define == 0 then it is in define mode (needed for netCDF-3)
      ! If define == 1 then it is in data   mode (needed for netCDF-3)
      integer            :: define
@@ -374,7 +375,9 @@ contains
           exist = .false.
        end if
     end if
-    this%define = 0
+    if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) then
+       this%define = -1
+    end if
 
     if ( .not. ncdf_participate(this) ) return
 
@@ -425,7 +428,11 @@ contains
          compress_lvl=compress_lvl)
 
     ! When we open a file, it will always be in data mode...
-    this%define = 1
+    if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) then
+       this%define = -1
+    else
+       this%define = 1
+    end if
 
     if ( .not. ncdf_participate(this) ) return
     
@@ -1214,6 +1221,7 @@ contains
 
 #ifdef NCDF_4
     if ( present(chunks) .and. .not. parallel_io(this) ) then
+       if ( chunks(1) > 0 ) then
        ! Set the chunking
        ldims = 1
        do i = 1 , min(size(chunks),size(dims))
@@ -1221,6 +1229,7 @@ contains
        end do
        iret = nf90_def_var_chunking(this%id, id, NF90_CHUNKED, ldims)
        call ncdf_err(iret,"Setting chunk size variable: "//trim(name)//" in file: "//this)
+       end if
     end if
 #endif
 
@@ -1857,9 +1866,8 @@ contains
     ! A NetCDF4 file still needs to define/redefine
     ! in collective manner, yet it is taken care of
     ! internally.
-    if ( this%define < 0 ) return
     if ( this%define == 1 ) return
-    this%define = 1
+    if ( this%define == 0 ) this%define = 1
     if ( .not. ncdf_participate(this) ) return
     i = nf90_enddef(this%id)
     if ( i == nf90_noerr ) return
@@ -1884,10 +1892,9 @@ contains
   subroutine ncdf_redef(this)
     type(hNCDF), intent(inout) :: this
     integer :: i
-    if ( this%define < 0 ) return
     ! Already in define mode:
     if ( this%define == 0 ) return
-    this%define = 0
+    if ( this%define == 1 ) this%define = 0
     if ( .not. ncdf_participate(this) ) return
     i = nf90_redef(this%id)
     if ( i == nf90_noerr ) return

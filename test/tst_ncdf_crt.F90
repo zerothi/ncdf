@@ -1,9 +1,13 @@
 program tst_ncdf
+
+  use dictionary
   use nf_ncdf
 
   use tst_ncdf_utils
 
   implicit none
+
+  character(len=30) :: fname
 
   integer :: Node, Nodes
   type(hNCDF) :: ncdf
@@ -11,8 +15,9 @@ program tst_ncdf
 
   call tst_mpi_init(Node,Nodes)
 
+  fname = 'NCDF_CRT_3.nc'
   ! Create the netcdf-file
-  call ncdf_create(ncdf,'NCDF_CRT_3.nc',&
+  call ncdf_create(ncdf,fname,&
        mode=NF90_64BIT_OFFSET, overwrite=.true.)
 
   ! Lets try and create a netcdf file, purely from a 
@@ -25,7 +30,7 @@ program tst_ncdf
   atts = ('info'.kv.'Coordinates')//('unit'.kv.'Ang')
   lv = ('atts'.kvp.atts) // ('type'.kv.NF90_DOUBLE)
   lv = lv // ('dims'.kv.'xyz,na,unlim')
-  dic = dic // ('VARxa'.kvp.lv)
+  dic = dic // ('VARv'.kvp.lv)
   call print(dic)
 
   ! Create another variable
@@ -39,10 +44,11 @@ program tst_ncdf
   call print(dic)
 
   call ncdf_crt(ncdf,dic)
-  
+
   call ncdf_close(ncdf)
-  call check_nc(''//ncdf)
-  
+
+  call check_nc(fname)
+
 #ifdef NCDF_PARALLEL
   call MPI_Finalize(Nodes)
 #endif

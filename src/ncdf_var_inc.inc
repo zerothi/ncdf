@@ -15,7 +15,7 @@ subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start,count)
 #else
 
   if ( .not. ncdf_participate(this) ) return
-  call ncdf_enddef(this)
+  if ( this%define > -1 ) call ncdf_enddef(this)
 #ifdef IS_COMPLEX
   ALLOC(r,var)
   r = real(var)
@@ -55,7 +55,7 @@ subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
   var = v(1)
 #else
   if ( .not. ncdf_participate(this) ) return
-  call ncdf_enddef(this)
+  if ( this%define > -1 ) call ncdf_enddef(this)
 #ifdef IS_COMPLEX
   ALLOC(r,var)
   ALLOC(i,var)
