@@ -20,7 +20,7 @@ lib:
 ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
-	(cd lib/fvar ; make "VPATH=$(VPATH)/lib/fvar" lib)
+	(cd fvar ; make "VPATH=$(VPATH)/fvar" lib)
 endif
 	(cd src ; make "VPATH=$(VPATH)/src" lib)
 
@@ -31,7 +31,7 @@ test: lib
 .PHONY: clean
 clean:
 ifndef LIBVARDICT
-	@if [ -d lib/fvar ]; then (cd lib/fvar ; make clean) ; fi
+	@if [ -d fvar ]; then (cd fvar ; make clean) ; fi
 endif
 	(cd src ; make clean)
 	(cd test ; make clean)

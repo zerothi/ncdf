@@ -37,16 +37,13 @@ LIB_PATH= -L$(Z_PATH)/lib \
 	  -Wl,-rpath=$(MPI_PATH)/lib
 
 
-LDFLAGS = $(LIB_PATH) -lnetcdff -lnetcdf -lpnetcdf -lhdf5hl_fortran -lhdf5_fortran -lhdf5_hl -lhdf5 -lz
+LIBS = $(LIB_PATH) -lnetcdff -lnetcdf -lpnetcdf -lhdf5hl_fortran -lhdf5_fortran -lhdf5_hl -lhdf5 -lz
 
 AR=xiar
 
 #FPPFLAGS += -DNCDF_4
 FPPFLAGS += -DNCDF_PARALLEL -DNCDF_4
 #FPPFLAGS += -DNCDF_PARALLEL
-
-# We need the library in the local repo
-INC += -I../lib/fvar
 
 .F90.o:
 	$(FC) -c $(INC) $(FFLAGS) $(FPPFLAGS) $< 

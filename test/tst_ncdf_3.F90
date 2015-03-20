@@ -1,4 +1,7 @@
 program tst_ncdf_3
+#ifdef NCDF_PARALLEL
+  use mpi
+#endif
   use dictionary
   use nf_ncdf
 

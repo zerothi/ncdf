@@ -13,7 +13,7 @@ AR         ?= ar
 ARFLAGS    ?= cru
 RANLIB     ?= ranlib
 PP         ?= cpp -E -P -C
-LIBVARDICT_DEFAULT = ../lib/fvar/libvardict.a
+LIBVARDICT_DEFAULT = ../fvar/libvardict.a
 LIBVARDICT ?= $(LIBVARDICT_DEFAULT)
 
 .PHONY: default
@@ -28,7 +28,7 @@ LIB = libncdf.a
 
 # Ensures module are in include path
 ifeq ($(LIBVARDICT),$(LIBVARDICT_DEFAULT))
-$(OBJS): INC += -I$(VPATH)/../lib/fvar
+$(OBJS): INC += -I$(VPATH)/../fvar
 endif
 
 .PHONY: lib

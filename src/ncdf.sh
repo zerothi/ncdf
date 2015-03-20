@@ -6,7 +6,7 @@ if [ ! -z "$VPATH" ]; then
 fi
 
 if [ -z "$DIR_FVAR" ]; then
-    var_dir=$_vpath/../lib/fvar
+    var_dir=$_vpath/../fvar
 else
     var_dir=$DIR_FVAR
 fi
