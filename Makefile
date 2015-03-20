@@ -20,18 +20,20 @@ lib:
 ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
-	(cd fvar ; make "VPATH=$(VPATH)/fvar" lib)
+	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
+		"ARCH_MAKE=$(VPATH)/arch.make" lib
 endif
-	(cd src ; make "VPATH=$(VPATH)/src" lib)
+	$(MAKE) -C src "VPATH=$(VPATH)/src" lib
 
 .PHONY: test
 test: lib
-	(cd test ; make "VPATH=$(VPATH)/test" all)
+	$(MAKE) -C test "VPATH=$(VPATH)/test" all
 
 .PHONY: clean
 clean:
 ifndef LIBVARDICT
-	@if [ -d fvar ]; then (cd fvar ; make clean) ; fi
+	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
+		"ARCH_MAKE=$(VPATH)/arch.make" clean
 endif
-	(cd src ; make clean)
-	(cd test ; make clean)
+	$(MAKE) -C src clean
+	$(MAKE) -C test clean
