@@ -89,7 +89,12 @@ module nf_ncdf
   integer, private, parameter :: dp = selected_real_kind(p=15)
 
   ! The IONode setting
+#ifdef NCDF_PARALLEL
   logical, save :: IONode = .false.
+#else
+  logical, save :: IONode = .true.
+#endif
+
   private :: IONode
 
   ! Local routines
