@@ -1,8 +1,8 @@
 
 # Set the default VPATH
-VPATH?=$(shell pwd)
+VPATH ?= $(shell pwd)
 
-ARCH_MAKE_DEFAULT=arch.make
+ARCH_MAKE_DEFAULT=$(VPATH)/arch.make
 ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
 include $(ARCH_MAKE)
 
@@ -21,7 +21,7 @@ ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
 	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
-		"ARCH_MAKE=$(VPATH)/arch.make" lib
+		"ARCH_MAKE=$(ARCH_MAKE)" lib
 endif
 	$(MAKE) -C src "VPATH=$(VPATH)/src" lib
 
@@ -33,7 +33,7 @@ test: lib
 clean:
 ifndef LIBVARDICT
 	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
-		"ARCH_MAKE=$(VPATH)/arch.make" clean
+		"ARCH_MAKE=$(ARCH_MAKE)" clean
 endif
 	$(MAKE) -C src clean
 	$(MAKE) -C test clean
