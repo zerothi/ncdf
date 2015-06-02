@@ -53,21 +53,6 @@
 !     (ncdf,var,type,dims, 
 !               *atts=(dictionary),*compress_lvl,*fill) (the fill variable is not implemented in NetCDF for now)
 
-! The parallel access scheme is governed in this order:
-!  a) open/create files with a wire
-!     1. The wires IO_COMM and IO_PAR is used to determine which processors that
-!        should be co-operating with the NetCDF file
-!     2. TODO : implement an automatic send/recv with those not in the IO_PAR group...
-!  b) open/create files with the optional "comm" flag.
-!     1. The specified communicator is used to do IO-operations
-!     2. 
-!  c) open/create files with optional "parallel" flag in the routines
-!     mean that the file are opened on each processor in NF90_SHARE mode.
-!     1. This will make reading independent on each other, but still allow for some 
-!        parallelization.
-
-
-
 ! A wrapper module for doing netcdf operations
 ! The idea is that this module should be able to do parallel IO when needed
 ! Currently it does not have this implemented, but it provides a wrapper basis
