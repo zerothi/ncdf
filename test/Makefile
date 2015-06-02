@@ -9,7 +9,7 @@ AR         ?= ar
 ARFLAGS    ?= cru
 RANLIB     ?= ranlib
 PP         ?= cpp -E -P -C
-LIBVARDICT_DEFAULT = ../fvar/libvardict.a
+LIBVARDICT_DEFAULT = ../fdict/libvardict.a
 LIBVARDICT ?= $(LIBVARDICT_DEFAULT)
 
 # The VPATH can be different, however the tree-structure
@@ -37,8 +37,8 @@ INC += -I../src
 
 # Ensures module are in include path
 ifeq ($(LIBVARDICT),$(LIBVARDICT_DEFAULT))
-$(OBJS): INC += -I$(VPATH)/../fvar
-all: INC += -I$(VPATH)/../fvar
+$(OBJS): INC += -I$(VPATH)/../fdict
+all: INC += -I$(VPATH)/../fdict
 endif
 
 .PHONY: all

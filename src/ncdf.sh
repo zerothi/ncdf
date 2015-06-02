@@ -5,10 +5,10 @@ if [ ! -z "$VPATH" ]; then
     _vpath=$VPATH
 fi
 
-if [ -z "$DIR_FVAR" ]; then
-    var_dir=$_vpath/../fvar
+if [ -z "$DIR_FDICT" ]; then
+    var_dir=$_vpath/../fdict
 else
-    var_dir=$DIR_FVAR
+    var_dir=$DIR_FDICT
 fi
 source $var_dir/settings.sh
 [ -e $var_dir/current_settings.sh ] && source $var_dir/current_settings.sh

@@ -20,7 +20,7 @@ lib:
 ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
-	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
+	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
 		"ARCH_MAKE=$(ARCH_MAKE)" lib
 endif
 	$(MAKE) -C src "VPATH=$(VPATH)/src" lib
@@ -32,7 +32,7 @@ test: lib
 .PHONY: clean
 clean:
 ifndef LIBVARDICT
-	$(MAKE) -C fvar "VPATH=$(VPATH)/fvar" \
+	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
 		"ARCH_MAKE=$(ARCH_MAKE)" clean
 endif
 	$(MAKE) -C src clean
