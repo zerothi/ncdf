@@ -8,7 +8,7 @@ include $(ARCH_MAKE)
 AR         ?= ar
 ARFLAGS    ?= cru
 RANLIB     ?= ranlib
-PP         ?= cpp -E -P -C
+PP         ?= cpp -E -P -C -nostdinc
 LIBVARDICT_DEFAULT = ../fdict/libvardict.a
 LIBVARDICT ?= $(LIBVARDICT_DEFAULT)
 

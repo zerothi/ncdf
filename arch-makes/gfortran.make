@@ -13,7 +13,7 @@ FFLAGS=-O2 -m64 -fPIC
 # This is for debugging purposes
 #FFLAGS = -g -O0 -Warray-bounds -Wunused
 
-PP = cpp -E -P -C
+PP = cpp -E -P -C -nostdinc
 
 C_V = gnu-4.7.2
 MPI_PATH=/opt/openmpi/1.8.3/$(C_V)
