@@ -32,8 +32,8 @@ test: lib
 .PHONY: clean
 clean:
 ifndef LIBVARDICT
-	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"ARCH_MAKE=$(ARCH_MAKE)" clean
+	-if [ -d fdict ]; then $(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
+		"ARCH_MAKE=$(ARCH_MAKE)" clean ; fi
 endif
 	$(MAKE) -C src clean
 	$(MAKE) -C test clean
