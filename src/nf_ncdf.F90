@@ -372,8 +372,8 @@ contains
     if ( .not. ncdf_participate(this) ) return
 
     if ( exist ) then
-       call ncdf_die("File: "//this//" already exists!. "//&
-            "Please delete the file (or request overwritting).")
+       call ncdf_die("File: "//this//" already exists! "//&
+            "Please delete the file (or request overwriting).")
     end if
 
     if ( this%parallel .and. this%comm >= 0 ) then
@@ -428,7 +428,7 @@ contains
     
     inquire(file=filename, exist=exist)
     if ( .not. exist ) then
-       call ncdf_die("File: "//trim(filename)//" does not exist!. "//&
+       call ncdf_die("File: "//trim(filename)//" does not exist! "//&
             "Please check your inqueries.")
     end if
 
@@ -532,7 +532,7 @@ contains
              call associate(v,d_var,'name')
              if ( which(v) /= 'V0' ) then
                 call ncdf_err(-200, &
-                     'ncdf_crt: Name of variable is not a character variable.')
+                     'Name of variable is not a character variable.')
              end if
              name = ' '
              call assign(name,v)
@@ -541,7 +541,7 @@ contains
           ! 1. Get the dimensions
           if ( 'dims'.nin. d_var ) then
              call ncdf_err(-200, &
-                  'ncdf_crt: Unable to retrieve the dimension &
+                  'Unable to retrieve the dimension &
                   &key from a variable dictionary. A variable &
                   &MUST be defined with a comma separated dimension.')
           end if
@@ -550,7 +550,7 @@ contains
           ! The dimensions has to be given in a comma separated list
           if ( which(v) /= 'V0' ) then
              call ncdf_err(-200, &
-                  'ncdf_crt: Dimension variable is not a character variable.')
+                  'Dimension variable is not a character variable.')
           end if
           ! Ensure we have a completely empty character.
           !print *,'Retrieve dims (2): ',trim(key)
@@ -582,7 +582,7 @@ contains
           ! Figure out the type
           if ( 'type' .nin. d_var ) then
              call ncdf_err(-200, &
-                  'ncdf_crt: Unable to retrieve the type &
+                  'Unable to retrieve the type &
                   &key from a variable dictionary. A variable &
                   &MUST have a clear type.')
           end if
@@ -592,7 +592,7 @@ contains
           if ( trim(char) /= 'b0' .and. &
                trim(char) /= 'i0' ) then
              call ncdf_err(-200, &
-                  'ncdf_crt: Type of variable is not defined with a &
+                  'Type of variable is not defined with a &
                   &proper variable designator.')
           end if
           if ( trim(char) == 'i0' ) then
@@ -1925,7 +1925,7 @@ contains
        end select
        write(*,"(a,tr1,i0)") "Status number:",status
        write(0,"(a,tr1,i0)") "Status number:",status
-       call ncdf_die("NetCDF Error: Stopped due to error in NetCDF file")
+       call ncdf_die("Stopped due to error in NetCDF file")
     endif
   end subroutine ncdf_err
 
@@ -2119,8 +2119,8 @@ contains
     integer :: MPIerror
 #endif
     
-    write(0,"(a)") trim(str)
-    write(6,"(a)") trim(str)
+    write(0,"(2a)") 'ncdf: ',trim(str)
+    write(6,"(2a)") 'ncdf: ',trim(str)
 
 #ifdef NCDF_PARALLEL
     call MPI_Abort(MPI_Comm_World,1,MPIerror)
