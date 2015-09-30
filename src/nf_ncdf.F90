@@ -696,7 +696,8 @@ contains
        call ncdf_inq(this,vars=N)
        do i = 1 , N
           call ncdf_err(nf90_inquire_variable(this%id, i, name=lname))
-          call var_par(lname,access)
+          call ncdf_err(nf90_var_par_access(this%id, i, access), &
+               'Changing par-access (VAR) '//trim(lname)//' in file: '//this)
        end do
     end if
 
@@ -2116,13 +2117,17 @@ contains
 #endif
     character(len=*), intent(in) :: str
 #ifdef NCDF_PARALLEL
-    integer :: MPIerror
+    integer :: Node, MPIerror
 #endif
     
     write(0,"(2a)") 'ncdf: ',trim(str)
     write(6,"(2a)") 'ncdf: ',trim(str)
 
 #ifdef NCDF_PARALLEL
+    call MPI_Comm_Rank(MPI_Comm_World,Node,MPIerror)
+    write(0,"(a,i0)") 'ncdf-Node ',Node
+    write(6,"(a,i0)") 'ncdf-Node ',Node
+
     call MPI_Abort(MPI_Comm_World,1,MPIerror)
 #else
     call abort()
