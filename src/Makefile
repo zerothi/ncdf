@@ -35,7 +35,7 @@ LIB = libncdf.a
 
 # Ensures module are in include path
 ifeq ($(LIBVARDICT),$(LIBVARDICT_DEFAULT))
-$(OBJS): INC += -I$(VPATH)/../fdict
+$(OBJS): INC += -I$(VPATH)/../fdict/src
 endif
 
 .PHONY: lib

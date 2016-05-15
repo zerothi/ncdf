@@ -21,7 +21,7 @@ ifdef LIBVARDICT
 	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
 else
 	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"ARCH_MAKE=$(ARCH_MAKE)" lib
+		"SETUP=$(ARCH_MAKE)" lib
 endif
 	$(MAKE) -C src "VPATH=$(VPATH)/src" lib
 
@@ -33,7 +33,7 @@ test: lib
 clean:
 ifndef LIBVARDICT
 	-if [ -d fdict ]; then $(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"ARCH_MAKE=$(ARCH_MAKE)" clean ; fi
+		"SETUP=$(ARCH_MAKE)" clean ; fi
 endif
 	$(MAKE) -C src clean
 	$(MAKE) -C test clean
