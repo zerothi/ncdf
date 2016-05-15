@@ -29,7 +29,7 @@ default: lib
 # Add user preprocessor flags
 PP += $(FPPFLAGS)
 # The different object files for this library.
-OBJS = nf_ncdf.o
+OBJS = ncdf.o
 
 LIB = libncdf.a
 
@@ -52,14 +52,14 @@ s/"endif"/\n\#endif/g'
 .PHONY: prep
 prep:
 	$(VPATH)/ncdf.sh
-	$(PP) -I. -I$(VPATH) $(VPATH)/nf_ncdf.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
-	$(PP) -I. -I$(VPATH) tmp.F90 | sed -e $(SED_DEL) > nf_ncdf.f90 #2> /dev/null
+	$(PP) -I. -I$(VPATH) $(VPATH)/ncdf_pp.F90 | sed -e $(SED_DEL) > tmp.F90 #2> /dev/null
+	$(PP) -I. -I$(VPATH) tmp.F90 | sed -e $(SED_DEL) > ncdf.f90 #2> /dev/null
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJS) $(LIB) *.o *.mod tmp.F90 nf_ncdf.f90
+	-rm -f $(OBJS) $(LIB) *.o *.mod tmp.F90 ncdf.f90
 	-rm -f ncdf_interface.inc ncdf_funcs.inc
 
 # Dependencies
-nf_ncdf.f90: | prep
-nf_ncdf.o: | prep
+ncdf.f90: | prep
+ncdf.o: | prep
