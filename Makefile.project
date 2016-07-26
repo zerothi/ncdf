@@ -62,7 +62,19 @@ clean:
 # in the sub-directory
 libvardict.a:
 	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"SETUP=$(SETUP)" lib
+		"SETUP=$(VPATH)/$(SETUP)" lib
+
+
+# Default to not use MPI
+NCDF_MPI = 0
+
+#    Check whether MPI is required
+ifeq (,$(findstring "NCDF_PARALLEL",$(CPPFLAGS)))
+NCDF_MPI = 1
+endif
+ifeq (,$(findstring "NCDF_PARALLEL",$(FPPFLAGS)))
+NCDF_MPI = 1
+endif
 
 
 #    Check whether the library is defined

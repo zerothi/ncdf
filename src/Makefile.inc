@@ -13,7 +13,7 @@ SRC_OBJECTS = $(patsubst %.f90, %.o, $(SRC_SOURCES))
 $(VSRC_DIR)/ncdf.o: $(VSRC_DIR)/ncdf.f90
 $(VSRC_DIR)/ncdf.f90: $(addprefix $(VSRC_DIR)/ncdf, .sh _att_inc.inc _var_inc.inc _pp.F90)
 	cd $(VSRC_DIR) ; ./ncdf.sh
-	$(CPP) $(CPPFLAGS) $(INCLUDES) -I$(VSRC_DIR) $(VSRC_DIR)/ncdf_pp.F90 \
+	$(CPP) $(CPPFLAGS) $(FPPFLAGS) $(INCLUDES) -I$(VSRC_DIR) $(VSRC_DIR)/ncdf_pp.F90 \
 		| sed -f $(VSRC_DIR)/filter.sed > $(VSRC_DIR)/ncdf.f90 $(PIPE_SILENT)
 
 .PHONY: clean-src

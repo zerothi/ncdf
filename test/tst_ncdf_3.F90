@@ -24,7 +24,7 @@ program tst_ncdf_3
   if ( Nodes > 1 ) then
      fname = 'NCDF_par_3.nc'
      call ncdf_create(ncdf,fname, &
-          mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET), &
+          mode=NF90_MPIIO, &
           overwrite=.true., comm=MPI_Comm_World)
   else
      fname = 'NCDF_seq_3.nc'

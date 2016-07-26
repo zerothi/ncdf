@@ -359,7 +359,7 @@ contains
          compress_lvl=compress_lvl)
 
     ! We need to correct the definition for netCDF-3 files
-    inquire(file=this%name,exist=exist)
+    inquire(file=this%name, exist=exist)
     if ( present(overwrite) ) then
        if ( overwrite ) then
           exist = .false.
@@ -2004,15 +2004,15 @@ contains
   function cat_char_ncdf(char,this) result(cat)
     character(len=*), intent(in) :: char
     type(hNCDF), intent(in) :: this
-    character(len=len(char)+len_trim(this%grp)) :: cat
-    cat = char/ /trim(this%grp)
+    character(len=len(char)+len_trim(this%name)) :: cat
+    cat = char/ /trim(this%name)
   end function cat_char_ncdf
 
   function cat_ncdf_char(this,char) result(cat)
     type(hNCDF), intent(in) :: this
     character(len=*), intent(in) :: char
-    character(len=len(char)+len_trim(this%grp)) :: cat
-    cat = trim(this%grp)/ /char
+    character(len=len(char)+len_trim(this%name)) :: cat
+    cat = trim(this%name)/ /char
   end function cat_ncdf_char
 
   subroutine ncdf_IONode(IO_Node)
@@ -2129,8 +2129,10 @@ contains
     write(0,"(a,i0)") 'ncdf-Node ',Node
     write(6,"(a,i0)") 'ncdf-Node ',Node
 
+    call backtrace()
     call MPI_Abort(MPI_Comm_World,1,MPIerror)
 #else
+    call backtrace()
     call abort()
 #endif
   end subroutine ncdf_die

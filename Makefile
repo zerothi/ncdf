@@ -42,5 +42,5 @@ $(LIBRARIES): $(OBJECTS)
 lib: settings.bash $(LIBRARIES)
 
 # Include the makefile in the test directory
-#include test/Makefile.inc
+include test/Makefile.inc
 
