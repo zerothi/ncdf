@@ -224,33 +224,45 @@ contains
     if ( present(name) ) this%name = name
     if ( present(compress_lvl) ) this%comp_lvl = compress_lvl
 
-    if ( .not. present(mode) ) then
+    exist = .false.
+    if ( present(mode) ) exist = .true.
+    if ( present(comm) ) then
+       if ( comm >= 0 ) exist = .true.
+    end if
+    if ( present(parallel) ) then
+       if ( parallel ) exist = .false.
+    end if
+    if ( .not. exist ) then
        ! Our default is the 64 bit offset files... 
        ! The best backwards compatibility format
        this%mode = IOR(this%mode,NF90_64BIT_OFFSET)
     end if
 
-
-    ! If the parallel interface is not applied we need the communicator 
-    ! to be negative
-    this%comm = -1 
-
+    
+    ! set the mode
+    if ( present(mode) ) then
+       this%mode = mode
+    end if
+    
+    
     ! This will create the correct order
+    exist = .false.
     if ( present(parallel) ) then
+       if ( parallel ) exist = .true.
+    end if
+    if ( present(comm) ) then
+       if ( comm >= 0 ) exist = .false.
+    end if
+    if ( exist ) then
        this%parallel = parallel
        ! The parallel flag is for the sequential parallel access !
        ! This will be reset to a zero mode if a communicator is supplied
        ! In this way we can have "parallel" access for reading purposes...
-       if ( parallel ) then
-          ! Check that the mode is not existing in the passed mode
-          if ( present(mode) ) then
-             if ( iand(NF90_SHARE,mode) /= NF90_SHARE ) &
-                  this%mode = NF90_SHARE
-          else
-             this%mode = NF90_SHARE
-          end if
-       end if
+
+       ! Check that the mode is not existing in the passed mode
+       this%mode = ior(this%mode, NF90_SHARE)
     end if
+    
 
     if ( present(comm) ) then
        if ( comm < 0 ) then
@@ -270,72 +282,19 @@ contains
                      "NO parallel access. Please correct.")
              end if
           end if
-          ! If a communicator is supplied we need to "delete" the NF90_SHARE we sat 
-          ! "possibly" above
-          this%mode = 0
 #endif
+       end if
+    end if
+
+
+    ! Define whether it should not be clobbered
+    inquire(file=""/ /this,exist=exist)
+    if ( present(overwrite) ) then
+       if ( exist .and. .not. overwrite ) then
+          this%mode = ior(this%mode, NF90_NOCLOBBER)
        end if
     end if
     
-#ifdef NCDF_PARALLEL
-    ! We need only do this if the file exists
-    inquire(file=""/ /this,exist=exist)
-    if ( present(overwrite) .and. exist ) then
-       exist = .not. overwrite
-    end if
-    if ( this%parallel .and. exist ) then
-       ! In case the implementation does not allow PCDF
-       ! The = 0 is the standard with no parallel enabled...
-       format = 0
-
-       ! We need to figure out whether the file is 
-       ! a NetCDF3 or NetCDF4 file...
-       call ncdf_inq(""/ /this,format=format)
-       if ( this%comm >= 0 ) then
-          call MPI_Bcast(format,1,MPI_Integer,0,this%comm,MPIerror)
-       end if
-
-       ! If the parallel flag has been set, we need to examine that
-       ! We will follow the parallel flag (and limit to the parallel accesible processors)
-       select case ( format )
-       case ( NF90_FORMAT_CLASSIC )
-          this%mode = NF90_PNETCDF
-       case ( NF90_FORMAT_64BIT )
-          this%mode = NF90_PNETCDF
-       case ( NF90_FORMAT_NETCDF4, NF90_FORMAT_NETCDF4_CLASSIC )
-          if ( present(mode) ) then
-             if ( iand(NF90_MPIIO   ,mode) /= NF90_MPIIO &
-                  .and. &
-                  iand(NF90_MPIPOSIX,mode) /= NF90_MPIPOSIX) then
-                this%mode = NF90_MPIIO
-             end if
-          else
-             this%mode = NF90_MPIIO
-          end if
-       end select
-    end if
-#endif
-
-    if ( present(mode) ) then
-       this%mode = IOR(this%mode,mode)
-    end if
-
-#ifdef NCDF_PARALLEL
-    ! If the user has forgotton the correct notation of the file format
-    if ( iand(NF90_MPIIO,this%mode) == NF90_MPIIO ) then
-       this%mode = IOR(this%mode,NF90_NETCDF4)
-    else if ( iand(NF90_MPIPOSIX,this%mode) == NF90_MPIPOSIX ) then
-       this%mode = IOR(this%mode,NF90_NETCDF4)
-       if ( iand(NF90_64BIT_OFFSET,this%mode) == NF90_64BIT_OFFSET ) &
-            call ncdf_die("You have requested netCDF4 parallel "/ /&
-            "IO together with a netCDF3 file.")
-    else if ( iand(NF90_PNETCDF,this%mode) == NF90_PNETCDF ) then
-       if ( iand(NF90_NETCDF4,this%mode) == NF90_NETCDF4 ) &
-            call ncdf_die("You have requested netCDF3 parallel "/ /&
-            "IO together with a netCDF4 file.")
-    end if
-#endif
-
   end subroutine ncdf_init
 
   subroutine ncdf_create(this,filename,mode,overwrite,parallel,comm, &
@@ -2084,8 +2043,11 @@ contains
        end if
        if ( iand(NF90_WRITE,this%mode) == NF90_WRITE ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_WRITE"
-       if ( iand(NF90_NOCLOBBER,this%mode) == NF90_NOCLOBBER ) &
-            write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOCLOBBER"
+       if ( iand(NF90_NOCLOBBER,this%mode) == NF90_NOCLOBBER ) then
+          write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOCLOBBER"
+       else
+          write(*,"(a20,a)") "NetCDF mode:        ","NF90_CLOBBER"
+       end if
        if ( iand(NF90_NOFILL,this%mode) == NF90_NOFILL ) &
             write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOFILL"
        if ( iand(NF90_64BIT_OFFSET,this%mode) == NF90_64BIT_OFFSET ) &

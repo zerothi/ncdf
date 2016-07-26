@@ -22,7 +22,7 @@ program tst_ncdf_4
   if ( Nodes > 1 ) then
      fname = 'NCDF_par_4.nc'
      call ncdf_create(ncdf,fname, &
-          mode=NF90_MPIIO, overwrite=.true., &
+          mode=ior(NF90_NETCDF4, NF90_MPIIO), overwrite=.true., &
           parallel=.true., &
           comm=MPI_Comm_World)
      ! parallel writes are not allowed with compression
@@ -47,7 +47,6 @@ program tst_ncdf_4
        atts=dic,compress_lvl=comp_lvl)
   call delete(dic)
 
-  ! independent access in case of parallel
   call ncdf_default(ncdf,access=NF90_COLLECTIVE)
 
   call ncdf_def_grp(ncdf,'info',grp1)

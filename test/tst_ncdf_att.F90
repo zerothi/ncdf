@@ -21,14 +21,15 @@ program tst_ncdf
   if ( Nodes > 1 ) then
      fname = 'NCDF_par_3.nc'
      call ncdf_create(ncdf,'NCDF_par_3.nc',&
-          mode=IOR(NF90_PNETCDF,NF90_64BIT_OFFSET), &
+          mode=NF90_MPIIO, &
           overwrite=.true., comm=MPI_Comm_World)
   else
      fname = 'NCDF_seq_3.nc'
      call ncdf_create(ncdf,'NCDF_seq_3.nc',&
           mode=NF90_64BIT_OFFSET, overwrite=.true.)
   end if
-  
+
+
   ! Define dimensions
   call ncdf_def_dim(ncdf,'x',1)
   call ncdf_def_dim(ncdf,'y',NF90_UNLIMITED)
@@ -37,10 +38,17 @@ program tst_ncdf
   call ncdf_def_var(ncdf,'v',NF90_DOUBLE,(/'x','y'/), atts=dic)
   call delete(dic) ! ensure deletion
 
+
   dic = ('g1'.kv.1)//('g2'.kv.(/1,2/))//('g3'.kv.(/1._dp,2._dp/))
   dic = dic // ('g4'.kv.'hello')
   call ncdf_put_gatt(ncdf,atts=dic)
   call delete(dic)
+
+  ! We must only redefine access patterns after
+  ! enddef...
+  call ncdf_enddef(ncdf)
+
+  call ncdf_par_access(ncdf,access=NF90_COLLECTIVE)
 
   call ncdf_print(ncdf)
   do i = 1 , 10
@@ -62,7 +70,7 @@ program tst_ncdf
   end do
 
   call ncdf_close(ncdf)
-  call check_nc(''//ncdf)
+  call check_nc(fname)
 
   if ( Nodes > 1 ) then
      call ncdf_open(ncdf,'NCDF_par_3.nc')

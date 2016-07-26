@@ -7,6 +7,7 @@ program test_ncdf
   implicit none
 
   type(hNCDF) :: ncdf
+  character(len=64) :: fname
   integer :: Node, Nodes, i
   character(len=1) :: ci
   type(dict) :: dic
@@ -77,13 +78,14 @@ contains
     do i = 1 , 10
        call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
     end do
+    fname = ''//ncdf
     call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
+    call check_nc(fname)
   end subroutine test_seq3
 
   subroutine test_seq4()
-    type(hNCDF):: grp1,grp2
 #ifdef NCDF_4
+    type(hNCDF):: grp1,grp2
     call show_where('In ncdf4 Sequential')
     call ncdf_create(ncdf,'NCDF4_seq.nc',mode=NF90_NETCDF4,overwrite=.true.)
     call ncdf_def_dim(ncdf,'x',1)
@@ -112,8 +114,9 @@ contains
     do i = 1 , 10
        call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
     end do
+    fname = ''//ncdf
     call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
+    call check_nc(fname)
 #endif
   end subroutine test_seq4
 
@@ -141,8 +144,9 @@ contains
           call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/))
        end if
     end do
+    fname = ''//ncdf
     call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
+    call check_nc(fname)
 #endif
   end subroutine test_par3
 
@@ -189,8 +193,9 @@ contains
        i = Node + 1
        call ncdf_put_var(ncdf,'v',real(i,8),start=(/1,i/),count=(/0,0/))
     end if
+    fname = ''//ncdf
     call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
+    call check_nc(fname)
 #endif
   end subroutine test_par4
 
@@ -226,8 +231,9 @@ contains
           call ncdf_put_var(ncdf,'h',(/real(i,8),real(i*2,8)/),start=(/1,i/),count=(/2/))
        end if
     end do
+    fname = ''//ncdf
     call ncdf_close(ncdf)
-    call check_nc(''//ncdf)
+    call check_nc(fname)
 #endif
   end subroutine test_par4_ind
 
