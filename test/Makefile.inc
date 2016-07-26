@@ -41,30 +41,32 @@ test: $(TEST_LIB) $(TEST_EXE)
 
 tst_ncdf_3: $(TEST_DIR)/tst_ncdf_3.o
 	$(FC) -o $(TEST_DIR)/$@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
-	$(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; ./$@ )
 ifeq ($(NCDF_MPI),1)
-	mpirun -np 2 $(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; mpirun -np 2 ./$@ )
 endif
+
 
 tst_ncdf_4: $(TEST_DIR)/tst_ncdf_4.o
 	$(FC) -o $(TEST_DIR)/$@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
-	$(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; ./$@ )
 ifeq ($(NCDF_MPI),1)
-	mpirun -np 2 $(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; mpirun -np 2 ./$@ )
 endif
+
 
 tst_ncdf_att: $(TEST_DIR)/tst_ncdf_att.o
 	$(FC) -o $(TEST_DIR)/$@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
-	$(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; ./$@ )
 ifeq ($(NCDF_MPI),1)
-	mpirun -np 2 $(TEST_DIR)/$@
+	(cd $(TEST_DIR) ; mpirun -np 2 ./$@ )
 endif
+
 
 # This should not run in parallel, however, it could be performed.
 tst_ncdf_crt: $(TEST_DIR)/tst_ncdf_crt.o
 	$(FC) -o $(TEST_DIR)/$@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
-	$(TEST_DIR)/$@
-
+	(cd $(TEST_DIR) ; ./$@ )
 
 
 .PHONY: clean-test
