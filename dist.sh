@@ -3,9 +3,9 @@
 # bash-script to create tar file for distribution
 
 # create the fdict file
-cd lib/fdict
+cd fdict
 fdict=`./dist.sh`
-cd ../../
+cd ../
 
 # Get tag branch and number of commits since
 describe=`git describe HEAD`
@@ -27,13 +27,13 @@ git archive --prefix ncdf-$describe/ \
 mkdir .tmp
 cd .tmp
 tar xfz ../$file
-cd ${file//.tar.gz/}/lib/
+cd ${file//.tar.gz/}/
 # Clean fdict directory
 rm -rf fdict
 # Extract fdict
-tar xfz ../../../lib/dfict/$dfict
-mv ${dfict//.tar.gz/} dfict
-cd ../../
+tar xfz ../../fdict/$fdict
+mv ${fdict//.tar.gz/} fdict
+cd ../
 tar cfz $file ${file//.tar.gz/}
 mv $file ../
 cd ../

@@ -61,8 +61,12 @@ clean:
 # First we define how to build the libvardict.a
 # in the sub-directory
 libvardict.a:
+ifdef SETUP
 	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
 		"SETUP=$(VPATH)/$(SETUP)" lib
+else
+	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" lib
+endif
 
 
 # Default to not use MPI
