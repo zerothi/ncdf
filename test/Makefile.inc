@@ -71,7 +71,7 @@ tst_ncdf_crt: $(TEST_DIR)/tst_ncdf_crt.o
 
 .PHONY: clean-test
 clean-test:
-	-rm -f $(addprefix $(TEST_DIR)/,$(TEST_EXE) $(LIB_TEST) $(TEST_COMMON) *.o *.mod)
+	-rm -f $(addprefix $(TEST_DIR)/,$(TEST_EXE) $(LIB_TEST) $(TEST_COMMON) *.o *.mod *.nc)
 clean: clean-test
 
 
