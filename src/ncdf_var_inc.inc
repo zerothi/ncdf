@@ -19,18 +19,18 @@ subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start,count)
 #ifdef IS_COMPLEX
   ALLOC(r,var)
   r = real(var)
-  call ncdf_inq_var(this,'Re'//name,id=id)
+  call ncdf_inq_var(this,'Re'/ /name,id=id)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start,count=count), &
-     "Saving variable (VAR) Re"//trim(name)//' in file: '//this)
-  call ncdf_inq_var(this,'Im'//name,id=id)
+     "Saving variable (VAR) Re"/ /trim(name)/ /' in file: '/ /this)
+  call ncdf_inq_var(this,'Im'/ /name,id=id)
   r = aimag(var)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start,count=count), &
-       'Saving variable (VAR) Im'//trim(name)//' in file: '//this)
+       'Saving variable (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
   deallocate(r)
 #else
   call ncdf_inq_var(this,name,id=id)
   call ncdf_err(nf90_put_var(this%id, id, var,start=start,count=count), &
-       'Saving variable (VAR) '//trim(name)//' in file: '//this)
+       'Saving variable (VAR) '/ /trim(name)/ /' in file: '/ /this)
 #endif
 #endif
 end subroutine ROUTINE3(put_var,VAR,name)
@@ -59,18 +59,18 @@ subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
 #ifdef IS_COMPLEX
   ALLOC(r,var)
   ALLOC(i,var)
-  call ncdf_inq_var(this,'Re'//name,id=id)
+  call ncdf_inq_var(this,'Re'/ /name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, r,start=start,count=count,stride=stride), &
-       'Retrieving variable (VAR) Re'//trim(name)//' in file: '//this)
-  call ncdf_inq_var(this,'Im'//name,id=id)
+       'Retrieving variable (VAR) Re'/ /trim(name)/ /' in file: '/ /this)
+  call ncdf_inq_var(this,'Im'/ /name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, i,start=start,count=count,stride=stride), &
-       'Retrieving variable (VAR) Im'//trim(name)//' in file: '//this)
+       'Retrieving variable (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
   var = cmplx(r,i)
   deallocate(r,i)
 #else
   call ncdf_inq_var(this,name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, var,start=start,count=count,stride=stride), &
-       'Retrieving (VAR) variable, '//trim(name)//' in file: '//this)
+       'Retrieving (VAR) variable, '/ /trim(name)/ /' in file: '/ /this)
 #endif
 #endif
 end subroutine ROUTINE3(get_var,VAR,name)
@@ -107,13 +107,13 @@ subroutine ROUTINE2(def_fill,VAR)(this, name, fill_val, fill)
 #ifdef IS_COMPLEX
   lr = real(lfill_val)
   call ncdf_err(nf90_def_var_fill(this%id, id(1), lfill, tmp_lr), &
-       'Setting fill (VAR) Re'//trim(name)//' in file: '//this)
+       'Setting fill (VAR) Re'/ /trim(name)/ /' in file: '/ /this)
   lr = aimag(lfill_val)
   call ncdf_err(nf90_def_var_fill(this%id, id(2), lfill, tmp_lr), &
-       'Setting fill (VAR) Im'//trim(name)//' in file: '//this)
+       'Setting fill (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
 #else
   call ncdf_err(nf90_def_var_fill(this%id, id, lfill, tmp_lr), &
-       'Setting fill (VAR) variable, '//trim(name)//' in file: '//this)
+       'Setting fill (VAR) variable, '/ /trim(name)/ /' in file: '/ /this)
 #endif
 end subroutine ROUTINE2(def_fill,VAR)
 
@@ -140,21 +140,21 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
 #endif
   if ( .not. ncdf_participate(this) ) return
 #ifdef IS_COMPLEX
-  call ncdf_inq_var_def(this,'Re'//name,id=lid,exist=exist,size=size,atts=atts)
+  call ncdf_inq_var_def(this,'Re'/ /name,id=lid,exist=exist,size=size,atts=atts)
   if ( present(exist) ) then
      if ( .not. exist ) return
   end if
   if ( present(id) ) id(1) = lid
   call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
-       'Retrieving variable-fill (VAR) Re-'//trim(name)//' in file: '//this)
+       'Retrieving variable-fill (VAR) Re-'/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) fill = lfill
-  call ncdf_inq_var_def(this,'Im'//name,id=lid,size=size,atts=atts)
+  call ncdf_inq_var_def(this,'Im'/ /name,id=lid,size=size,atts=atts)
   if ( present(id) ) id(2) = lid
   call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
-       'Retrieving variable-fill (VAR) Im-'//trim(name)//' in file: '//this)
+       'Retrieving variable-fill (VAR) Im-'/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) then
      if ( fill /= lfill ) then	
-     	call ncdf_err(-100,'Fill-value for real and imaginary part'//&
+     	call ncdf_err(-100,'Fill-value for real and imaginary part'/ /&
 	  ' are not the same. This is not allowed.')
      end if
   end if
@@ -169,7 +169,7 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
   end if
   if ( present(id) ) id = lid
   call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
-       'Retrieving variable-fill (VAR) '//trim(name)//' in file: '//this)
+       'Retrieving variable-fill (VAR) '/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) fill = lfill
   !if ( present(fill_val) ) fill_val = lfill_val
   fill_val = 0.

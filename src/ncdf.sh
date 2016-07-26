@@ -10,11 +10,11 @@ if [ -z "$DIR_FDICT" ]; then
 else
     var_dir=$DIR_FDICT
 fi
-source $var_dir/settings.sh
-[ -e $var_dir/current_settings.sh ] && source $var_dir/current_settings.sh
+source $var_dir/default_settings.bash
+[ -e $var_dir/settings.sh ] && source $var_dir/settings.bash
 
 # Override any special settings in this file
-[ -e $_vpath/settings.sh ] && source $_vpath/settings.sh
+[ -e $_vpath/settings.bash ] && source $_vpath/settings.bash
 
 # The different variable types used in this (long does not exist)
 vars=(h s d c z i)

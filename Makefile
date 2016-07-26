@@ -1,39 +1,46 @@
-
-# Set the default VPATH
+# Define VPATH
 VPATH ?= $(shell pwd)
 
-ARCH_MAKE_DEFAULT=$(VPATH)/arch.make
-ARCH_MAKE?=$(ARCH_MAKE_DEFAULT)
-include $(ARCH_MAKE)
+# Define default target:
+default: lib
 
-# We need to assure that libvardict.a is existing
+# SMEKASETTINGS (DO NOT DELETE)
+# DO NOT CHANGE CONTENT IN THIS BLOCK
+# IT MAY BE OVERWRITTEN WHEN REINSTALLING SMEKA
+#
+# This Makefile was created by smeka:
+#  github.com/zerothi/smeka
 
-.PHONY: default
-default: all
+# Top-directory of Makefile/source tree
+# If need set, do so ABOVE this block!
+TOP_DIR ?= .
 
-.PHONY: all
-all: lib
-	@echo Done with everything
+# Directory of smeka default Makefiles
+SMEKA_DIR = smeka
 
-.PHONY: lib
-lib:
-ifdef LIBVARDICT
-	@echo "Using pre-built LIBVARDICT: $(LIBVARDICT)"
-else
-	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"SETUP=$(ARCH_MAKE)" lib
+# Include the smeka settings!
+include $(TOP_DIR)/$(SMEKA_DIR)/Makefile.smeka
+
+# SMEKAENDSETTINGS (DO NOT DELETE)
+
+ifeq ($(NCDF_FDICT_LOCAL), 1)
+
+#    If it is not found define the appropriate
+#    LIBS and LDFLAGS
+LIBS += $(VPATH)/fdict/libvardict.a
+INCLUDES += -I$(VPATH)/fdict/src
+
 endif
-	$(MAKE) -C src "VPATH=$(VPATH)/src" lib
 
-.PHONY: test
-test: lib
-	$(MAKE) -C test "VPATH=$(VPATH)/test" all
+# Include the makefile in the src directory
+include src/Makefile.inc
 
-.PHONY: clean
-clean:
-ifndef LIBVARDICT
-	-if [ -d fdict ]; then $(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"SETUP=$(ARCH_MAKE)" clean ; fi
-endif
-	$(MAKE) -C src clean
-	$(MAKE) -C test clean
+# Libraries depend on the objects
+$(LIBRARIES): $(OBJECTS)
+
+# Create target
+lib: settings.bash $(LIBRARIES)
+
+# Include the makefile in the test directory
+#include test/Makefile.inc
+
