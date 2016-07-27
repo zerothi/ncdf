@@ -1,7 +1,7 @@
 _SMEKA_project = 1
 
-# Contains specific default information for this
-# project
+
+# Contains specific default information for this project
 
 # Step this version upon new versions
 PROJECT_VERSION = 0.3
@@ -13,7 +13,7 @@ PROJECT_NAME = ncdf
 STATIC ?= 1
 # If the library was built previously,
 # we default to building the shared library.
-ifneq ("$(wildcard libncdf.so)","")
+ifneq ("","$(wildcard libncdf.so)")
  SHARED ?= 1
 else
  SHARED ?= 0
@@ -61,50 +61,54 @@ clean:
 # First we define how to build the libvardict.a
 # in the sub-directory
 libvardict.a:
+ifeq (0,$(BUILD_MAIN_DIR))
+# Create the default makefile for fdict as we are in a sub-directory
+	@mkdir -p fdict
+	@echo "TOP_DIR = ../$(TOP_DIR)/fdict" > fdict/Makefile
+	@echo "include \$$(TOP_DIR)/Makefile" >> fdict/Makefile
+endif
 ifdef SETUP
-	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" \
-		"SETUP=$(VPATH)/$(SETUP)" lib
+	$(MAKE) -C fdict "SETUP=../$(TOP_DIR)/$(SETUP)" lib
 else
-	$(MAKE) -C fdict "VPATH=$(VPATH)/fdict" lib
+	$(MAKE) -C fdict lib
 endif
 
 
-# Default to not use MPI
-NCDF_MPI = 0
-
-#    Check whether MPI is required
-ifeq (,$(findstring "NCDF_PARALLEL",$(CPPFLAGS)))
-NCDF_MPI = 1
+# Check whether MPI is required
+MPI ?= 0
+ifeq (,$(findstring "NCDF_PARALLEL",$(CPPFLAGS) $(FPPFLAGS)))
+MPI = 1
 endif
-ifeq (,$(findstring "NCDF_PARALLEL",$(FPPFLAGS)))
-NCDF_MPI = 1
+
+ifeq (1,$(MPI))
+libncdf.so: CC = $(MPICC)
 endif
 
 
 #    Check whether the library is defined
 #    in the LIBS variable.
+FDICT_LOCAL = 0
 ifeq (,$(findstring "vardict",$(LIBS)))
-NCDF_FDICT_LOCAL = 1
+FDICT_LOCAL = 1
 
 # Add dependency (without adding the
 # dependency to the list of targets ($^))
 $(LIBRARIES): | libvardict.a
 
+
 .PHONY: clean-fdict
 clean-fdict:
 	$(MAKE) -C fdict clean
+
 clean: clean-fdict
-
-else
-
-NCDF_FDICT_LOCAL = 0
 
 endif
 
 
 # The settings.bash file is here created from the fdict file
 settings.bash: FORCE
-	$(pushd $(VPATH) ; VPATH=$(VPATH) ./setup.sh --default ; popd)
+	VPATH="$(TOP_DIR)" $(TOP_DIR)/setup.sh --default
+
 
 # Local Variables:
 #  mode: makefile-gmake

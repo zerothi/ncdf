@@ -23,17 +23,17 @@ include $(TOP_DIR)/$(SMEKA_DIR)/Makefile.smeka
 
 # SMEKAENDSETTINGS (DO NOT DELETE)
 
-ifeq ($(NCDF_FDICT_LOCAL), 1)
+ifeq ($(FDICT_LOCAL), 1)
 
 #    If it is not found define the appropriate
 #    LIBS and LDFLAGS
-LIBS += $(VPATH)/fdict/libvardict.a
-INCLUDES += -I$(VPATH)/fdict/src
+LIBS += ./fdict/libvardict.a
+INCLUDES += -I./fdict
 
 endif
 
 # Include the makefile in the src directory
-include src/Makefile.inc
+include $(TOP_DIR)/src/Makefile.inc
 
 # Libraries depend on the objects
 $(LIBRARIES): $(OBJECTS)
@@ -42,5 +42,5 @@ $(LIBRARIES): $(OBJECTS)
 lib: settings.bash $(LIBRARIES)
 
 # Include the makefile in the test directory
-include test/Makefile.inc
+include $(TOP_DIR)/test/Makefile.inc
 
