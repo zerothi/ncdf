@@ -93,21 +93,25 @@ program tst_ncdf
         call associate(i0,v)
         if ( i0 /= 1 ) then
            print *,'ERROR on g1',i0
+           stop 9
         end if
      case ( 'g2' )
         call associate(i1,v)
         if ( any(i1 /= (/1,2/)) ) then
            print *,'ERROR on g2'
+           stop 9
         end if
      case ( 'g3' )
         call associate(d1,v)
         if ( maxval(abs(d1 - (/1._dp,2._dp/))) > 1.e-10_dp ) then
            print *,'ERROR on g3'
+           stop 9
         end if
      case ( 'g4' )
         call assign(a2,v)
         if ( a2 /= 'hello' ) then
            print *,'ERROR on g4'
+           stop 9
         end if
      end select
      ld = .next. ld

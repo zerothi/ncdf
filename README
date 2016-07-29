@@ -43,7 +43,7 @@ They are all prefixed with NCDF_ to not interfere with any custom flags.
 - MPI, allows for communicators and should be used for any code which
   uses MPI.
   It does not requires to have either CDDF4, nor the PCDF flag.
-  Flag: NCDF_MPI
+  Flag: MPI
 - CDF4 allow the NetCDF 4 API for compression and the MPI layer with 
   the MPI flag.
   Flag: NCDF_CDF4

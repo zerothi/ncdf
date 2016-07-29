@@ -90,6 +90,7 @@ contains
        end if
     else if ( Node == 0 ) then
        write(*,'(a)')'File: '//trim(file)//' does not exist!'
+       stop 9
     end if
   end subroutine check_nc
 

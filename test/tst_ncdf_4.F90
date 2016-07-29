@@ -95,6 +95,7 @@ program tst_ncdf_4
   call ncdf_assert(ncdf,assert,dims=dic)
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion...',Node
   end if
@@ -105,6 +106,7 @@ program tst_ncdf_4
   call ncdf_assert(grp1,assert,dims=dic)
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED, grp1',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion..., grp1',Node
   end if
@@ -112,6 +114,7 @@ program tst_ncdf_4
   call delete(dic)
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED, grp2',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion..., grp2',Node
   end if

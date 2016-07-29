@@ -68,6 +68,7 @@ program tst_ncdf_3
   call delete(dic)
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion...',Node
   end if
@@ -81,6 +82,7 @@ program tst_ncdf_3
   end do
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion...',Node
   end if
@@ -95,6 +97,7 @@ program tst_ncdf_3
   end do
   if ( .not. assert ) then
      write(*,*) 'ASSERTION NOT FULFILLED',Node
+     stop 9
   else
      write(*,*) 'Fulfilled assertion...',Node
   end if
