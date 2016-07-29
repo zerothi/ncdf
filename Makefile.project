@@ -58,9 +58,9 @@ clean:
 # The reason is that it may be build automatically
 # in the fdict sub-directory.
 
-# First we define how to build the libvardict.a
+# First we define how to build the libfdict.a
 # in the sub-directory
-libvardict.a:
+libfdict.a:
 ifeq (0,$(BUILD_MAIN_DIR))
 # Create the default makefile for fdict as we are in a sub-directory
 	@mkdir -p fdict
@@ -88,12 +88,12 @@ endif
 #    Check whether the library is defined
 #    in the LIBS variable.
 FDICT_LOCAL = 0
-ifeq (,$(findstring "vardict",$(LIBS)))
+ifeq (,$(findstring "fdict",$(LIBS)))
 FDICT_LOCAL = 1
 
 # Add dependency (without adding the
 # dependency to the list of targets ($^))
-$(LIBRARIES): | libvardict.a
+$(LIBRARIES): | libfdict.a
 
 
 .PHONY: clean-fdict

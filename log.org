@@ -64,7 +64,7 @@ same thing in redef.
 
 ** Cleaned up build instructions <2014-10-14 Tue>
 The build instructions can now utilise a user supplied path
-to libvardict.a which enables the build process to be
+to libfdict.a which enables the build process to be
 fully controlled by the environment.
 
 ** NCDF enddef changed <2014-10-14 Tue>

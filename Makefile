@@ -27,7 +27,7 @@ ifeq ($(FDICT_LOCAL), 1)
 
 #    If it is not found define the appropriate
 #    LIBS and LDFLAGS
-LIBS += ./fdict/libvardict.a
+LIBS += ./fdict/libfdict.a
 INCLUDES += -I./fdict
 
 endif
