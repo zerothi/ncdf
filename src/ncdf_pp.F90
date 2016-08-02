@@ -722,6 +722,7 @@ contains
     if ( present(format) ) format = lformat
 
     if ( present(dict_dim) ) then
+       call delete(dict_dim)
        do i = 1 , ldims
           call ncdf_err(nf90_inquire_dimension(this%id,i,name=key))
           call ncdf_inq_dim(this,key,len=val)
@@ -730,6 +731,7 @@ contains
     end if
 
     if ( present(dict_att) ) then
+       call delete(dict_att)
        call get_atts_id(this,NF90_GLOBAL,dict_att)
     end if
 
