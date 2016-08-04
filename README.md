@@ -12,10 +12,10 @@ It has proven quite useful as the necessity to switch between MPI and non-MPI [N
 
 ## Downloading and installation ##
 
-Installing fdict requires a download of the library 
+Installing ncdf requires a download of the library 
 hosted at [github](https://github.com/) at [ncdf@git].
 
-Note that NCDF depends on the dictionary library [fdict@git].
+Note that ncdf depends on the dictionary library [fdict@git].
 
 If `fdict` is not already installed you may need to add the submodule
 
@@ -39,7 +39,7 @@ which installs the required files (modules and libraries) to the folder.
 To use the library you need to add include statements for the
 modules as well as linking to the program.
 
-To link fdict to your program the following can be used in a `Makefile`
+To link ncdf to your program the following can be used in a `Makefile`
 
     FDICT_PATH  = /path/to/fdict/parent
     FDICT_LIBS  = -L$(FDICT_PATH) -lfdict
@@ -143,7 +143,7 @@ If you have a fix please consider adding a [pull request][pr].
 
 ## License ##
 
-The fdict license is [LGPL][lgpl], see the LICENSE file.
+The ncdf license is [LGPL][lgpl], see the LICENSE file.
 
 ## Thanks ##
 
@@ -157,7 +157,7 @@ Links to external and internal sites.
 [netcdf]: http://www.unidata.ucar.edu/software/netcdf/][NetCDF
 [ncdf@git]: https://github.com/zerothi/ncdf
 [fdict@git]: https://github.com/zerothi/fdict
-<!-- [fdict-doc]: https://github.com/zerothi/ncdf/wiki -->
+<!-- [ncdf-doc]: https://github.com/zerothi/ncdf/wiki -->
 [issue]: https://github.com/zerothi/ncdf/issues
 [pr]: https://github.com/zerothi/ncdf/pulls
 [lgpl]: http://www.gnu.org/licenses/lgpl.html
