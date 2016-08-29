@@ -23,15 +23,6 @@ include $(TOP_DIR)/$(SMEKA_DIR)/Makefile.smeka
 
 # SMEKAENDSETTINGS (DO NOT DELETE)
 
-ifeq ($(FDICT_LOCAL), 1)
-
-#    If it is not found define the appropriate
-#    LIBS and LDFLAGS
-LIBS += ./fdict/libfdict.a
-INCLUDES += -I./fdict
-
-endif
-
 # Include the makefile in the src directory
 include $(TOP_DIR)/src/Makefile.inc
 
