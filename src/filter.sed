@@ -4,6 +4,9 @@
 s/NEWLINE/\
 /g
 #
+# This is for removing empty lines
+/^[[:space:]]*$/d
+#
 # Basically the following commands translates
 # pre-processors within another preprocessor
 # which isn't allowed.
@@ -29,4 +32,5 @@ s/"endif"/\
 #
 # In fortran one may use the // operator
 # But C-preprocessors are hungry and gobbles them...
+# So we use / / and filter them to // after preprocessing
 s:/ /://:g
