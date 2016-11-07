@@ -68,7 +68,11 @@ ifeq (0,$(BUILD_MAIN_DIR))
 	@echo "include \$$(TOP_DIR)/Makefile" >> fdict/Makefile
 endif
 ifdef SETUP
+ifeq ($(SETUP_RELATIVE),1)
 	$(MAKE) -C fdict "SETUP=../$(TOP_DIR)/$(SETUP)" lib
+else
+	$(MAKE) -C fdict "SETUP=$(SETUP)" lib
+endif
 else
 	$(MAKE) -C fdict lib
 endif
