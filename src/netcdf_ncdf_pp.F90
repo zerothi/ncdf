@@ -57,7 +57,7 @@
 ! The idea is that this module should be able to do parallel IO when needed
 ! Currently it does not have this implemented, but it provides a wrapper basis
 ! which makes it easy.
-module nf_ncdf
+module netcdf_ncdf
 
   ! Globalize the variables needed for generating the requested features
   use netcdf
@@ -160,7 +160,7 @@ module nf_ncdf
   logical, parameter :: NF90_VAR_FILL   = .false.      ! for false it is float
 
   ! Added interface
-#include "ncdf_interface.inc"
+#include "netcdf_ncdf_interface.inc"
 
 contains
 
@@ -1808,8 +1808,8 @@ contains
 
   end subroutine ncdf_fill
 
-! Use the netcdf_wrap.sh script to generate the needed code...
-#include "ncdf_funcs.inc"
+! Use the ncdf.sh script to generate the needed code...
+#include "netcdf_ncdf_funcs.inc"
 
   subroutine ncdf_enddef(this)
     type(hNCDF), intent(inout) :: this
@@ -2101,5 +2101,5 @@ contains
 #endif
   end subroutine ncdf_die
 
-end module nf_ncdf
+end module netcdf_ncdf
 

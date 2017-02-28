@@ -32,7 +32,7 @@ contains
 #ifdef NCDF_PARALLEL
     use mpi
 #endif
-    use nf_ncdf
+    use netcdf_ncdf
 
     integer, intent(out) :: oNode, oNodes
     

@@ -73,7 +73,7 @@ for v in ${vars[@]} ; do
 done
 _psnl "end interface ncdf_$sub"
 done
-} > ncdf_interface.inc
+} > netcdf_ncdf_interface.inc
 
 {
 _psnl "#undef VAR_PREC"
@@ -95,9 +95,9 @@ for v in ${vars[@]} ; do
 	fi
         # Attributes only allowed for dimensions larger than 1
 	if [ $d -le 1 ] && [ $(has_att $v) -eq 1 ]; then
-	    _psnl '#include "ncdf_att_inc.inc"'
+	    _psnl '#include "netcdf_ncdf_att_inc.inc"'
 	fi
-	_psnl '#include "ncdf_var_inc.inc"'
+	_psnl '#include "netcdf_ncdf_var_inc.inc"'
 	_psnl "#undef IS_COMPLEX"
 	_psnl "#undef REAL_TYPE"
 	_psnl "#undef VAR"
@@ -106,4 +106,4 @@ for v in ${vars[@]} ; do
     done
     _psnl "#undef VAR_TYPE"
 done
-} > ncdf_funcs.inc
+} > netcdf_ncdf_funcs.inc

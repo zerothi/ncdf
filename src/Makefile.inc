@@ -4,36 +4,45 @@ VPATH := $(VPATH):$(src_DIR)
 
 
 # Define sources in this src directory
-src_CPP_SOURCES = ncdf.f90
-src_SOURCES = $(src_CPP_SOURCES)
-src_OBJECTS = $(patsubst %.f90, %.o, $(src_SOURCES))
+src_OBJECTS = netcdf_ncdf.o
+src_SOURCES = $(patsubst %.o, %.f90, $(src_OBJECTS))
+src_FPP_SOURCES = $(src_SOURCES)
+src_MODS = $(patsubst %.f90, %.mod, $(src_SOURCES))
 
 
 # Create dependency tree such that we may bypass phony targets
-ncdf.o: ncdf.f90
-ncdf.f90: $(addprefix ncdf, .sh _att_inc.inc _var_inc.inc _pp.F90)
-	cd $(src_DIR) && ./ncdf.sh
-	$(CPP) $(CPPFLAGS) $(FPPFLAGS) $(INCLUDES) -I$(src_DIR) $(src_DIR)/ncdf_pp.F90 \
-		| sed -f $(src_DIR)/filter.sed > ncdf.f90 $(PIPE_SILENT)
-
-
-.PHONY: clean-src
-clean-src:
-	-rm -f *.o *.mod ncdf.f90
-	-rm -f $(addprefix $(src_DIR)/, *.o *.mod)
-	-rm -f $(call addpresuf,$(src_DIR)/ncdf_,.inc, funcs interface)
-
-clean: clean-src
+# Note that settings.bash dependency forces netcdf_ncdf.f90 to be generated
+# ALWAYS. This is a precaution.
+netcdf_ncdf.o: netcdf_ncdf.f90
+netcdf_ncdf.f90: netcdf_ncdf_pp.F90 netcdf_ncdf_att_inc.inc netcdf_ncdf_var_inc.inc ncdf.sh settings.bash
+	VPATH="$(TOP_DIR)/src" $(src_DIR)/ncdf.sh
+	$(FPP) $(FPPFLAGS) $(INCLUDES) -I. $< | sed -f $(src_DIR)/filter.sed > $@
 
 
 # Define objects that needs compilation
 SOURCES += $(src_SOURCES)
-CPP_SOURCES += $(src_CPP_SOURCES)
-F_MODS  += $(patsubst %.f90, %.mod, $(src_SOURCES))
+FPP_SOURCES += $(src_FPP_SOURCES)
+F_MODS  += $(src_MODS)
 OBJECTS += $(src_OBJECTS)
 
+
 # Ensure that the objects are built with the correct module path
-$(src_CPP_SOURCES): INCLUDES += -I$(src_DIR)
+$(src_FPP_SOURCES): INCLUDES += -I$(src_DIR)
+
+.PHONY: source-src
+source-src: $(src_SOURCES)
+	mkdir -p $(SOURCES_DIR)/src
+	mv $(src_SOURCES) $(SOURCES_DIR)/src
+
+
+.PHONY: clean-src
+clean-src:
+	-rm -f $(src_FPP_SOURCES)
+	-rm -f $(src_OBJECTS)
+	-rm -f *.mod
+	-rm -f netcdf_ncdf_funcs.inc netcdf_ncdf_interface.inc
+
+clean: clean-src
 
 
 # Local Variables:

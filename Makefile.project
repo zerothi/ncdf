@@ -4,27 +4,37 @@ _SMEKA_project = 1
 # Contains specific default information for this project
 
 # Step this version upon new versions
-PROJECT_VERSION = 0.3
+PROJECT_MAJOR = 0
+PROJECT_MINOR = 4
+PROJECT_MICRO = 0
+PROJECT_VERSION = $(PROJECT_MAJOR).$(PROJECT_MINOR).$(PROJECT_MICRO)
 
 # These are constant default
 PROJECT_NAME = ncdf
+
+# Create the list of libraries
+NCDF_LIB ?= ncdf$(LIB_SUFFIX)
+NCDF_LIB_STATIC ?= lib$(NCDF_LIB).a
+NCDF_LIB_SHARED ?= lib$(NCDF_LIB).so
 
 # Define custom options for fdict
 STATIC ?= 1
 # If the library was built previously,
 # we default to building the shared library.
-ifneq ("","$(wildcard libncdf.so)")
+ifneq ("","$(wildcard $(NCDF_LIB_SHARED))")
  SHARED ?= 1
 else
  SHARED ?= 0
 endif
 
+
+
 # Create the list of libraries
 ifeq ($(STATIC),1)
-  LIBRARIES += libncdf.a
+  LIBRARIES += $(NCDF_LIB_STATIC)
 endif
 ifeq ($(SHARED),1)
-  LIBRARIES += libncdf.so
+  LIBRARIES += $(NCDF_LIB_SHARED)
   # Forcefully denote that objects should have
   # position independent code
   # THIS IS A SMEKA SETTING
@@ -32,61 +42,21 @@ ifeq ($(SHARED),1)
 endif
 
 
-# Silence the error messages when piping
-PIPE_SILENT ?= 2> /dev/null
-
-
 # Create custom installation of modules
-.NOTPARALLEL: install_mod
-smeka-install: install_mod
-install_mod:
+.NOTPARALLEL: install-mod
+smeka-install: install-mod
+install-mod:
 	install -pm $(_OCT_rwrr) -t $(FMOD_DIR) $(F_MODS)
 
-.NOTPARALLEL: install_settings
-smeka-install: install_settings
-install_settings:
+.NOTPARALLEL: install-settings
+smeka-install: install-settings
+install-settings:
 	install -pm $(_OCT_rwrr) -t $(BIN_DIR) settings.bash
 
 
 # Force the deletion of both libraries
 clean:
-	-rm -f libncdf.so
-	-rm -f libncdf.a
-
-
-# Figure out how fdict is linked...
-# The reason is that it may be build automatically
-# in the fdict sub-directory.
-
-# First we define how to build the libfdict.a
-# in the sub-directory
-libfdict.a:
-ifeq (0,$(BUILD_MAIN_DIR))
-# Create the default makefile for fdict as we are in a sub-directory
-	@mkdir -p fdict
-	@echo "TOP_DIR = ../$(TOP_DIR)/fdict" > fdict/Makefile
-	@echo "include \$$(TOP_DIR)/Makefile" >> fdict/Makefile
-endif
-ifdef SETUP
-ifeq ($(SETUP_RELATIVE),1)
-	$(MAKE) -C fdict "SETUP=../$(TOP_DIR)/$(SETUP)" lib
-else
-	$(MAKE) -C fdict "SETUP=$(SETUP)" lib
-endif
-else
-	$(MAKE) -C fdict lib
-endif
-
-
-# Check whether MPI is required
-MPI ?= 0
-ifeq (,$(findstring "NCDF_PARALLEL",$(CPPFLAGS) $(FPPFLAGS)))
-MPI = 1
-endif
-
-ifeq (1,$(MPI))
-libncdf.so: CC = $(MPICC)
-endif
+	-rm -f $(NCDF_LIB_SHARED) $(NCDF_LIB_STATIC) settings.bash
 
 
 # Local Variables:

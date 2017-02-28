@@ -1,5 +1,5 @@
 program tst_ncdf
-  use nf_ncdf
+  use netcdf_ncdf
 
   use tst_ncdf_utils
 

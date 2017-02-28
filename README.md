@@ -104,6 +104,8 @@ Basically there was a couple of issues that was troubling the author.
 
 Here is the simple example:
 
+    use netcdf_ncdf
+
     type(hNCDF) :: nf
 
     call ncdf_create(nf,'Test.nc')

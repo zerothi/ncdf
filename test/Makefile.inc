@@ -14,10 +14,10 @@ TEST_OBJECTS = $(addsuffix .o, $(TEST))
 
 
 ifeq ($(STATIC),1)
-  TEST_LIB    = libncdf.a
+  TEST_LIB    = $(NCDF_LIB_STATIC)
 else
   ifeq ($(SHARED),1)
-    TEST_LIB  = libncdf.so
+    TEST_LIB  = $(NCDF_LIB_SHARED)
   else
     $(error No library is build, the tests cannot be performed.)
   endif
