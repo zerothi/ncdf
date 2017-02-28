@@ -77,16 +77,10 @@ ifneq (,$(findstring NCDF_4,$(FPPFLAGS)))
  CDF = 4
 endif
 
-
-# Include the makefile in the src directory
-include $(TOP_DIR)/src/Makefile.inc
-
-
-
 # The linker is a fortran compiler
 LINK := $(FC)
 
-
+##
 # Figure out if the fdict library is linked manually.
 # In this case we do not add dependency on the 
 ifeq (,$(findstring fdict,$(LIBS)))
@@ -111,6 +105,11 @@ install: install-fdict
 settings.bash: lib-fdict FORCE
 	-cp fdict/obj/settings.bash .
 
+.PHONY: copy-fdict copy
+copy-fdict: prep-fdict
+	$(MAKE) -C fdict/obj copy
+copy: copy-fdict
+
 else
  # In this instance the fdict library is supplied externally
  # The variable FDICT_PREFIX should be present
@@ -127,22 +126,44 @@ settings.bash:
 
 endif
 
+# Create target
+.PHONY: lib
+lib: settings.bash
 
+# Include the makefile in the src directory
+include $(TOP_DIR)/src/Makefile.inc
+
+
+# Include the makefile in the test directory
+include $(TOP_DIR)/test/Makefile.inc
+
+# Libraries depend on the objects
+ifneq ($(LIBRARIES),)
+
+$(LIBRARIES): $(OBJECTS)
+$(OBJECTS): settings.bash
+lib: $(LIBRARIES)
+
+endif
+
+
+
+##
 # This handy target copies from the SOURCES_DIR all sources
 # to the current directory
 # But ONLY if the current directory is not the top of the project
-.PHONY: copy
+.PHONY: copy-ncdf copy
+copy-ncdf:
 ifeq ($(TOP_DIR),.)
-copy:
 	@echo ""
 	@echo "make copy does not work when executed from the top ncdf directory"
 	@echo "Please create an object directory with an appropriate Makefile"
 	@echo ""
 else
-copy:
 	cp $(SOURCES_DIR)/src/*.f90 .
 endif
 
+copy: copy-ncdf
 
 # Create source target for creating _only_ the sources.
 .PHONY: source
@@ -158,17 +179,36 @@ ifneq ($(MPI),0)
  SOURCES_DIR := $(SOURCES_DIR)_parallel
 endif
 
-# Libraries depend on the objects
-ifneq ($(LIBRARIES),)
-$(LIBRARIES): $(OBJECTS)
 
-# Create target
-.PHONY: lib
-lib: settings.bash $(LIBRARIES)
+##
+# Distribution targets for creating the distribution of flook
+# Create distribution for releases
+.PHONY: dist-fdict dist-ncdf dist-assemble dist
+dist-fdict:
+	git submodule sync fdict
+	git submodule init fdict
+	git submodule update fdict
+	(cd fdict ; make dist ; mv fdict-*.tar.gz .. )
 
-endif
+dist-ncdf:
+	git archive --format=tar --prefix ncdf-$(PROJECT_VERSION)/ HEAD > ncdf-$(PROJECT_VERSION).tar
+# Force the creation of the 3 pre-defined source directories
+	$(MAKE) source CDF=3 MPI=0
+	$(MAKE) source CDF=4 MPI=0
+	$(MAKE) source CDF=4 MPI=1
+# Clean up
+	rm *.inc
+	tar --transform 's,^,ncdf-$(PROJECT_VERSION)/,' -rf ncdf-$(PROJECT_VERSION).tar sources*
+	-@rm -f ncdf-$(PROJECT_VERSION).tar.gz
+	gzip ncdf-$(PROJECT_VERSION).tar
 
+dist-assemble: dist-fdict dist-ncdf
+	-rm -rf .tmp_dist
+	(mkdir .tmp_dist ; cd .tmp_dist ; \
+	tar xfz ../ncdf-$(PROJECT_VERSION).tar.gz ; cd ncdf-$(PROJECT_VERSION) ; \
+	tar xfz ../../fdict-*.tar.gz ; mv fdict-*/* fdict/ ; rm -rf fdict-* ; \
+	cd .. ; rm ../ncdf-$(PROJECT_VERSION).tar.gz ; \
+	tar cfz ../ncdf-$(PROJECT_VERSION).tar.gz ncdf-$(PROJECT_VERSION) ; \
+	rm -rf .tmp_dist ../fdict-*.tar.gz)
 
-# Include the makefile in the test directory
-include $(TOP_DIR)/test/Makefile.inc
-
+dist: dist-assemble
