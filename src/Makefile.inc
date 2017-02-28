@@ -14,7 +14,7 @@ src_MODS = $(patsubst %.f90, %.mod, $(src_SOURCES))
 netcdf_ncdf.o: netcdf_ncdf.f90
 netcdf_ncdf.f90: netcdf_ncdf_pp.F90 netcdf_ncdf_att_inc.inc netcdf_ncdf_var_inc.inc ncdf.sh
 	VPATH="$(TOP_DIR)/src" $(src_DIR)/ncdf.sh
-	$(FPP) $(FPPFLAGS) $(INCLUDES) -I. $< | sed -f $(src_DIR)/filter.sed > $@
+	$(FPP) $(FPPFLAGS) $(INCLUDES) -I$(src_DIR) -I. $< | sed -f $(src_DIR)/filter.sed > $@
 
 
 # Define objects that needs compilation
