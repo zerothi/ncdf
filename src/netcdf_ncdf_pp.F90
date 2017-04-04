@@ -2093,11 +2093,9 @@ contains
     write(0,"(a,i0)") 'ncdf-Node ',Node
     write(6,"(a,i0)") 'ncdf-Node ',Node
 
-    call backtrace()
     call MPI_Abort(MPI_Comm_World,1,MPIerror)
 #else
-    call backtrace()
-    call abort()
+    stop
 #endif
   end subroutine ncdf_die
 
