@@ -436,7 +436,7 @@ contains
     type(var) :: v
     character(len=DICT_KEY_LENGTH) :: key
     character(len=NF90_MAX_NAME) :: name, char
-    character(len=50), allocatable :: dims(:)
+    character(len=64), allocatable :: dims(:)
     integer, pointer :: chunks(:) => null()
     integer :: d_n, type, i, n_d, j
     ! Type declarations
@@ -2016,34 +2016,36 @@ contains
       else if ( this%define == 1 ) then
         write(*,"(a20,a)") "In define-mode:     ","False"
       end if
-      call ncdf_inq(this, dims=ndims, vars=nvars, atts=ngatts, &
-          grps=ngrps, format=file_format)
-      select case ( file_format ) 
-      case ( NF90_FORMAT_CLASSIC )
-        write(*,"(a20,a)") "File format:        ","Classic"
-      case ( NF90_FORMAT_64BIT )
-        write(*,"(a20,a)") "File format:        ","Classic 64Bit"
-      case ( NF90_FORMAT_NETCDF4 )
-        write(*,"(a20,a)") "File format:        ","NetCDF4"
-        write(*,"(a20,i7)")"Default compression:",this%comp_lvl
-      case ( NF90_FORMAT_NETCDF4_CLASSIC )
-        write(*,"(a20,a)") "File format:        ","NetCDF4 Classic format"
-        write(*,"(a22,i7)")"Default compression:  ",this%comp_lvl
-      case default
-        write(*,"(a20,a)") "File format:        ","Could not be determined"
-      end select
-      write(*,"(a20,i7)") "Number of dimensions:  ",ndims
-      write(*,"(a20,i7)") "Number of variables:   ",nvars
-      write(*,"(a20,i7)") "Number of attributes:  ",ngatts
-      if ( ngrps >= 0 ) then
-        write(*,"(a20,i7)") "Number of groups:      ",ngrps
+      if ( this%f_id >= 0 ) then
+        call ncdf_inq(this, dims=ndims, vars=nvars, atts=ngatts, &
+            grps=ngrps, format=file_format)
+        select case ( file_format ) 
+        case ( NF90_FORMAT_CLASSIC )
+          write(*,"(a20,a)") "File format:        ","Classic"
+        case ( NF90_FORMAT_64BIT )
+          write(*,"(a20,a)") "File format:        ","Classic 64Bit"
+        case ( NF90_FORMAT_NETCDF4 )
+          write(*,"(a20,a)") "File format:        ","NetCDF4"
+          write(*,"(a20,i7)")"Default compression:",this%comp_lvl
+        case ( NF90_FORMAT_NETCDF4_CLASSIC )
+          write(*,"(a20,a)") "File format:        ","NetCDF4 Classic format"
+          write(*,"(a22,i7)")"Default compression:  ",this%comp_lvl
+        case default
+          write(*,"(a20,a)") "File format:        ","Could not be determined"
+        end select
+        write(*,"(a20,i7)") "Number of dimensions:  ",ndims
+        write(*,"(a20,i7)") "Number of variables:   ",nvars
+        write(*,"(a20,i7)") "Number of attributes:  ",ngatts
+        if ( ngrps >= 0 ) then
+          write(*,"(a20,i7)") "Number of groups:      ",ngrps
+        end if
       end if
-      if ( iand(NF90_WRITE,this%mode) == NF90_WRITE ) &
-          write(*,"(a20,a)") "NetCDF mode:        ","NF90_WRITE"
-      if ( iand(NF90_NOCLOBBER,this%mode) == NF90_NOCLOBBER ) then
-        write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOCLOBBER"
-      else
-        write(*,"(a20,a)") "NetCDF mode:        ","NF90_CLOBBER"
+        if ( iand(NF90_WRITE,this%mode) == NF90_WRITE ) &
+            write(*,"(a20,a)") "NetCDF mode:        ","NF90_WRITE"
+        if ( iand(NF90_NOCLOBBER,this%mode) == NF90_NOCLOBBER ) then
+          write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOCLOBBER"
+        else
+          write(*,"(a20,a)") "NetCDF mode:        ","NF90_CLOBBER"
       end if
       if ( iand(NF90_NOFILL,this%mode) == NF90_NOFILL ) &
           write(*,"(a20,a)") "NetCDF mode:        ","NF90_NOFILL"

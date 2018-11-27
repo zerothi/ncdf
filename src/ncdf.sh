@@ -83,7 +83,7 @@ for v in ${vars[@]} ; do
 	if [ $d -eq 0 ]; then
 	    _psnl "#define DIMS"
 	else
-	    _psnl "#define DIMS , dimension$(dim_to_size $d)"
+	    _psnl "#define DIMS $(dim_to_size $d)"
 	fi
 	_psnl "#define VAR $v$d"
 	_psnl "#define DIM $d"

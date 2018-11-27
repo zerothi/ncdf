@@ -2,12 +2,12 @@
 subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start,count)
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
-  VAR_TYPE, intent(in)DIMS :: var
+  VAR_TYPE, intent(in) :: var DIMS
   integer, intent(in), optional :: start(:)
   integer, intent(in), optional :: count(:)
   integer :: id
 #ifdef IS_COMPLEX
-  REAL_TYPE, allocatable DIMS :: r
+  REAL_TYPE, allocatable :: r DIMS
 #endif
 
 #if DIM == 0
@@ -18,12 +18,12 @@ subroutine ROUTINE3(put_var,VAR,name)(this,name,var,start,count)
   if ( this%define > -1 ) call ncdf_enddef(this)
 #ifdef IS_COMPLEX
   ALLOC(r,var)
-  r = real(var)
+  r DIMS = real(var)
   call ncdf_inq_var(this,'Re'/ /name,id=id)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start,count=count), &
      "Saving variable (VAR) Re"/ /trim(name)/ /' in file: '/ /this)
   call ncdf_inq_var(this,'Im'/ /name,id=id)
-  r = aimag(var)
+  r DIMS = aimag(var)
   call ncdf_err(nf90_put_var(this%id, id, r,start=start,count=count), &
        'Saving variable (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
   deallocate(r)
@@ -39,14 +39,14 @@ end subroutine ROUTINE3(put_var,VAR,name)
 subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
-  VAR_TYPE, intent(out)DIMS :: var
+  VAR_TYPE, intent(out) :: var DIMS
   integer, intent(in), optional :: start(:)
   integer, intent(in), optional :: count(:)
   integer, intent(in), optional :: stride(:)
 #if DIM > 0 
   integer :: id
 #ifdef IS_COMPLEX
-  REAL_TYPE, allocatable DIMS :: r,i
+  REAL_TYPE, allocatable :: r DIMS , i DIMS
 #endif
 #endif
 #if DIM == 0
@@ -65,7 +65,7 @@ subroutine ROUTINE3(get_var,VAR,name)(this, name, var, start, count, stride)
   call ncdf_inq_var(this,'Im'/ /name,id=id)
   call ncdf_err(nf90_get_var(this%id, id, i,start=start,count=count,stride=stride), &
        'Retrieving variable (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
-  var = cmplx(r,i)
+  var DIMS = cmplx(r,i)
   deallocate(r,i)
 #else
   call ncdf_inq_var(this,name,id=id)
