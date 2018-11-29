@@ -105,7 +105,7 @@ module netcdf_ncdf
      ! If define == 1 then it is in data   mode (needed for netCDF-3)
      integer            :: define
      ! The name of the netCDF-file
-     character(len=250) :: name = " "
+     character(len=256) :: name = " "
      ! the group of the netCDF-file (i.e. a file within a file)
      character(len=NF90_MAX_NAME) :: grp = " "
      ! The communicator describing the parallel activity
@@ -852,7 +852,7 @@ contains
 
     ! We can currently only check integers :(
     character(len=DICT_KEY_LENGTH) :: key
-    character(len=2) :: t
+    character(len=VAR_TYPE_LENGTH) :: t
     type(dict) :: dic ! local loop dictionary...
     type(var) :: ivar
     logical :: success
@@ -1680,7 +1680,7 @@ contains
     character(len=*), intent(in) :: name
     type(var),  intent(inout) :: att
     integer :: xtype, att_len
-    character(len=500) :: att_char
+    character(len=512) :: att_char
     real(sp), allocatable :: a_sp(:)
     real(dp), allocatable :: a_dp(:)
     integer(ih), allocatable :: a_ih(:)
