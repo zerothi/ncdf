@@ -76,7 +76,6 @@ done
 } > netcdf_ncdf_interface.inc
 
 {
-_psnl "#undef VAR_PREC"
 for v in ${vars[@]} ; do
     _psnl "#define VAR_TYPE $(var_name $v)"
     for d in `seq 0 $(var_N $v)` ; do
@@ -87,18 +86,25 @@ for v in ${vars[@]} ; do
 	fi
 	_psnl "#define VAR $v$d"
 	_psnl "#define DIM $d"
-	if [ "$v" == "c" ] || [ "$v" == "z" ]; then
-	    _psnl "#define IS_COMPLEX"
-	    _psnl "#define REAL_TYPE $(var_name $(c_to_r $v))"
-	else
-	    _psnl "#define REAL_TYPE VAR_TYPE"
-	fi
+	case $v in
+	    c)
+		_psnl "#define COMPLEX_DTYPE sp"
+		_psnl "#define REAL_TYPE $(var_name $(c_to_r $v))"
+		;;
+	    z)
+		_psnl "#define COMPLEX_DTYPE dp"
+		_psnl "#define REAL_TYPE $(var_name $(c_to_r $v))"
+		;;
+	    *)
+		_psnl "#define REAL_TYPE VAR_TYPE"
+		;;
+	esac
         # Attributes only allowed for dimensions larger than 1
 	if [ $d -le 1 ] && [ $(has_att $v) -eq 1 ]; then
 	    _psnl '#include "netcdf_ncdf_att_inc.inc"'
 	fi
 	_psnl '#include "netcdf_ncdf_var_inc.inc"'
-	_psnl "#undef IS_COMPLEX"
+	_psnl "#undef COMPLEX_DTYPE"
 	_psnl "#undef REAL_TYPE"
 	_psnl "#undef VAR"
 	_psnl "#undef DIM"
