@@ -13,7 +13,7 @@ program tst_ncdf_4
 
   type(hNCDF) :: ncdf, grp1, grp2
   integer :: Node, Nodes, i, comp_lvl
-  type(dict) :: dic
+  type(dictionary_t) :: dic
   logical :: assert
 
   call tst_mpi_init(Node,Nodes)

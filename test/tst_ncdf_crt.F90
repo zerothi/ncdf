@@ -11,7 +11,7 @@ program tst_ncdf
 
   integer :: Node, Nodes
   type(hNCDF) :: ncdf
-  type(dict) :: dic, lv, atts
+  type(dictionary_t) :: dic, lv, atts
 
   call tst_mpi_init(Node,Nodes)
 

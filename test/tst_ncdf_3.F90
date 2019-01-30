@@ -14,7 +14,7 @@ program tst_ncdf_3
   type(hNCDF) :: ncdf
   integer :: Node, Nodes, i
   character(len=1) :: ci
-  type(dict) :: dic
+  type(dictionary_t) :: dic
   logical :: assert
   integer :: ilist1(1,10), ilist2(2,10)
 

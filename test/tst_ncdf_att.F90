@@ -9,11 +9,11 @@ program tst_ncdf
 
   type(hNCDF) :: ncdf
   integer :: Node, Nodes, i
-  type(dict) :: dic, ld
+  type(dictionary_t) :: dic, ld
   character(len=255) :: a1, a2
   integer, pointer :: i0, i1(:)
   real(dp), pointer :: d1(:)
-  type(var) :: v
+  type(variable_t) :: v
 
   call tst_mpi_init(Node,Nodes)
 

@@ -73,7 +73,7 @@ for v in ${vars[@]} ; do
 done
 _psnl "end interface ncdf_$sub"
 done
-} > netcdf_ncdf_interface.inc
+} > netcdf_ncdf_interface_.inc
 
 {
 for v in ${vars[@]} ; do
@@ -112,4 +112,4 @@ for v in ${vars[@]} ; do
     done
     _psnl "#undef VAR_TYPE"
 done
-} > netcdf_ncdf_funcs.inc
+} > netcdf_ncdf_funcs_.inc

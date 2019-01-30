@@ -38,7 +38,7 @@ clean-src:
 	-rm -f $(src_FPP_SOURCES)
 	-rm -f $(src_OBJECTS)
 	-rm -f *.mod
-	-rm -f netcdf_ncdf_funcs.inc netcdf_ncdf_interface.inc
+	-rm -f netcdf_ncdf_funcs_.inc netcdf_ncdf_interface_.inc
 
 clean: clean-src
 

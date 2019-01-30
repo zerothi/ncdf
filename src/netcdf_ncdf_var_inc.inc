@@ -129,7 +129,7 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
   integer, intent(out), optional  :: id
 #endif
   integer, intent(out), optional  :: size(:)
-  type(dict), intent(inout), optional :: atts
+  type(dictionary_t), intent(inout), optional :: atts
   integer, intent(out), optional :: fill
   integer :: lid, lfill
   integer :: tmp_lr
