@@ -16,9 +16,17 @@ netcdf_ncdf.f90: netcdf_ncdf_pp.F90 netcdf_ncdf_att_inc.inc netcdf_ncdf_var_inc.
 	VPATH="$(TOP_DIR)/src" $(src_DIR)/ncdf.sh
 	$(FPP) $(FPPFLAGS) $(INCLUDES) -I$(src_DIR) -I. $< | sed -f $(src_DIR)/filter.sed > $@
 
+netcdf_ncdf.inc:
+	@echo "#ifndef _NETCDF_NCDF_INCLUDE_DEFINED" > $@
+	@echo "#define _NETCDF_NCDF_INCLUDE_DEFINED" >> $@
+	@echo "#define _NETCDF_NCDF_MAJOR_ $(PROJECT_MAJOR)" >> $@
+	@echo "#define _NETCDF_NCDF_MINOR_ $(PROJECT_MINOR)" >> $@
+	@echo "#define _NETCDF_NCDF_MICRO_ $(PROJECT_MICRO)" >> $@
+	@echo "#define _NETCDF_NCDF_VERSION_ $(PROJECT_VERSION)" >> $@
+	@echo "#endif" >> $@
 
 # Define objects that needs compilation
-SOURCES += $(src_SOURCES)
+SOURCES += $(src_SOURCES) netcdf_ncdf.inc
 FPP_SOURCES += $(src_FPP_SOURCES)
 F_MODS  += $(src_MODS)
 OBJECTS += $(src_OBJECTS)
@@ -28,9 +36,9 @@ OBJECTS += $(src_OBJECTS)
 $(src_FPP_SOURCES): INCLUDES += -I$(src_DIR)
 
 .PHONY: source-src
-source-src: $(src_SOURCES)
+source-src: $(src_SOURCES) netcdf_ncdf.inc
 	mkdir -p $(SOURCES_DIR)/src
-	mv $(src_FPP_SOURCES) $(SOURCES_DIR)/src
+	mv $(src_SOURCES) netcdf_ncdf.inc $(SOURCES_DIR)/src
 
 
 .PHONY: clean-src

@@ -128,7 +128,7 @@ endif
 
 # Create target
 .PHONY: lib
-lib: settings.bash
+lib: settings.bash netcdf_ncdf.inc
 
 # Include the makefile in the src directory
 include $(TOP_DIR)/src/Makefile.inc
@@ -160,7 +160,7 @@ ifeq ($(TOP_DIR),.)
 	@echo "Please create an object directory with an appropriate Makefile"
 	@echo ""
 else
-	cp $(SOURCES_DIR)/src/*.f90 .
+	cp $(SOURCES_DIR)/src/*.f90 $(SOURCES_DIR)/src/*.inc .
 endif
 
 copy: copy-ncdf

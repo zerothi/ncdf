@@ -6,7 +6,7 @@ _SMEKA_project = 1
 # Step this version upon new versions
 PROJECT_MAJOR = 0
 PROJECT_MINOR = 5
-PROJECT_MICRO = 0
+PROJECT_MICRO = 1
 PROJECT_VERSION = $(PROJECT_MAJOR).$(PROJECT_MINOR).$(PROJECT_MICRO)
 
 # These are constant default
@@ -53,10 +53,15 @@ smeka-install: install-settings
 install-settings:
 	install -pm $(_OCT_rwrr) -t $(BIN_DIR) settings.bash
 
+.NOTPARALLEL: install-header
+smeka-install: install-header
+install-header: netcdf_ncdf.inc
+	install -pm $(_OCT_rwrr) -t $(INC_DIR) netcdf_ncdf.inc
+
 
 # Force the deletion of both libraries
 clean:
-	-rm -f $(NCDF_LIB_SHARED) $(NCDF_LIB_STATIC) settings.bash
+	-rm -f $(NCDF_LIB_SHARED) $(NCDF_LIB_STATIC) settings.bash netcdf_ncdf.inc
 
 
 # Local Variables:
