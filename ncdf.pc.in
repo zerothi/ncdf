@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+bindir=@BIN_DIR@
+includedir=@INC_DIR@
+libdir=@LIB_DIR@
+
+Name: @PROJECT_NAME@
+Description: Easy creation of NetCDF files using key-based writes
+Version: @PROJECT_VERSION@
+URL: https://github.com/zerothi/ncdf
+Cflags: -I${includedir}
+Requires.private: fdict
+Libs: -L${libdir} -lncdf
+
