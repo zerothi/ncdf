@@ -17,13 +17,13 @@ netcdf_ncdf.f90: netcdf_ncdf_pp.F90 netcdf_ncdf_att_inc.inc netcdf_ncdf_var_inc.
 	$(FPP) $(FPPFLAGS) $(INCLUDES) -I$(src_DIR) -I. $< | sed -f $(src_DIR)/filter.sed > $@
 
 netcdf_ncdf.inc:
-	@echo "#ifndef _NETCDF_NCDF_INCLUDE_DEFINED" > $@
-	@echo "#define _NETCDF_NCDF_INCLUDE_DEFINED" >> $@
-	@echo "#define _NETCDF_NCDF_MAJOR_ $(PROJECT_MAJOR)" >> $@
-	@echo "#define _NETCDF_NCDF_MINOR_ $(PROJECT_MINOR)" >> $@
-	@echo "#define _NETCDF_NCDF_MICRO_ $(PROJECT_MICRO)" >> $@
-	@echo "#define _NETCDF_NCDF_VERSION_ $(PROJECT_VERSION)" >> $@
-	@echo "#endif" >> $@
+	@$(ECHO) "#ifndef _NETCDF_NCDF_INCLUDE_DEFINED" > $@
+	@$(ECHO) "#define _NETCDF_NCDF_INCLUDE_DEFINED" >> $@
+	@$(ECHO) "#define _NETCDF_NCDF_MAJOR_ $(PROJECT_MAJOR)" >> $@
+	@$(ECHO) "#define _NETCDF_NCDF_MINOR_ $(PROJECT_MINOR)" >> $@
+	@$(ECHO) "#define _NETCDF_NCDF_MICRO_ $(PROJECT_MICRO)" >> $@
+	@$(ECHO) "#define _NETCDF_NCDF_VERSION_ $(PROJECT_VERSION)" >> $@
+	@$(ECHO) "#endif" >> $@
 
 # Define objects that needs compilation
 SOURCES += $(src_SOURCES) netcdf_ncdf.inc
@@ -37,16 +37,16 @@ $(src_FPP_SOURCES): INCLUDES += -I$(src_DIR)
 
 .PHONY: source-src
 source-src: $(src_SOURCES) netcdf_ncdf.inc
-	mkdir -p $(SOURCES_DIR)/src
+	$(MKDIR) $(MKDIR_FLAG_PARENT) $(SOURCES_DIR)/src
 	mv $(src_SOURCES) netcdf_ncdf.inc $(SOURCES_DIR)/src
 
 
 .PHONY: clean-src
 clean-src:
-	-rm -f $(src_FPP_SOURCES)
-	-rm -f $(src_OBJECTS)
-	-rm -f *.mod
-	-rm -f netcdf_ncdf_funcs_.inc netcdf_ncdf_interface_.inc
+	-$(RM) $(RM_FLAG_FORCE) $(src_FPP_SOURCES)
+	-$(RM) $(RM_FLAG_FORCE) $(src_OBJECTS)
+	-$(RM) $(RM_FLAG_FORCE) *.mod
+	-$(RM) $(RM_FLAG_FORCE) netcdf_ncdf_funcs_.inc netcdf_ncdf_interface_.inc
 
 clean: clean-src
 

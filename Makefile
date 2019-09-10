@@ -29,9 +29,9 @@ include $(TOP_DIR)/$(SMEKA_DIR)/Makefile.smeka
 # Define internal fdict library build
 .PHONY: prep-fdict lib-fdict clean-fdict
 prep-fdict:
-	(mkdir -p fdict/obj ; cd fdict/obj ; \
-		echo "TOP_DIR =../../$(TOP_DIR)/fdict" > Makefile ; \
-		echo "include ../../$(TOP_DIR)/fdict/Makefile" >> Makefile )
+	($(MKDIR) $(MKDIR_FLAG_PARENT) fdict/obj ; cd fdict/obj ; \
+		$(ECHO) "TOP_DIR =../../$(TOP_DIR)/fdict" > Makefile ; \
+		$(ECHO) "include ../../$(TOP_DIR)/fdict/Makefile" >> Makefile )
 lib-fdict: prep-fdict
 ifdef SETUP
 	$(MAKE) -C fdict/obj SETUP=../../$(SETUP)
@@ -103,7 +103,7 @@ install: install-fdict
  # When using the internal library we force the copy (the user
  # *must* not change the settings)
 settings.bash: lib-fdict FORCE
-	-cp fdict/obj/settings.bash .
+	-$(CP) fdict/obj/settings.bash .
 
 .PHONY: copy-fdict copy
 copy-fdict: prep-fdict
@@ -155,12 +155,12 @@ endif
 .PHONY: copy-ncdf copy
 copy-ncdf:
 ifeq ($(TOP_DIR),.)
-	@echo ""
-	@echo "make copy does not work when executed from the top ncdf directory"
-	@echo "Please create an object directory with an appropriate Makefile"
-	@echo ""
+	@$(ECHO) ""
+	@$(ECHO) "make copy does not work when executed from the top ncdf directory"
+	@$(ECHO) "Please create an object directory with an appropriate Makefile"
+	@$(ECHO) ""
 else
-	cp $(SOURCES_DIR)/src/*.f90 $(SOURCES_DIR)/src/*.inc .
+	$(CP) $(SOURCES_DIR)/src/*.f90 $(SOURCES_DIR)/src/*.inc .
 endif
 
 copy: copy-ncdf
@@ -197,18 +197,18 @@ dist-ncdf:
 	$(MAKE) source CDF=4 MPI=0
 	$(MAKE) source CDF=4 MPI=1
 # Clean up
-	rm *.inc
+	$(RM) *.inc
 	tar --transform 's,^,ncdf-$(PROJECT_VERSION)/,' -rf ncdf-$(PROJECT_VERSION).tar sources*
-	-@rm -f ncdf-$(PROJECT_VERSION).tar.gz
+	-@$(RM) $(RM_FLAG_FORCE) ncdf-$(PROJECT_VERSION).tar.gz
 	gzip ncdf-$(PROJECT_VERSION).tar
 
 dist-assemble: dist-fdict dist-ncdf
-	-rm -rf .tmp_dist
-	(mkdir .tmp_dist ; cd .tmp_dist ; \
+	-$(RM) $(RM_FLAG_FORCE) $(RM_FLAG_RECURSE) .tmp_dist
+	($(MKDIR) .tmp_dist ; cd .tmp_dist ; \
 	tar xfz ../ncdf-$(PROJECT_VERSION).tar.gz ; cd ncdf-$(PROJECT_VERSION) ; \
-	tar xfz ../../fdict-*.tar.gz ; mv fdict-*/* fdict/ ; rm -rf fdict-* ; \
-	cd .. ; rm ../ncdf-$(PROJECT_VERSION).tar.gz ; \
+	tar xfz ../../fdict-*.tar.gz ; mv fdict-*/* fdict/ ; $(RM) $(RM_FLAG_FORCE) $(RM_FLAG_RECURSE) fdict-* ; \
+	cd .. ; $(RM) ../ncdf-$(PROJECT_VERSION).tar.gz ; \
 	tar cfz ../ncdf-$(PROJECT_VERSION).tar.gz ncdf-$(PROJECT_VERSION) ; \
-	rm -rf .tmp_dist ../fdict-*.tar.gz)
+	$(RM) $(RM_FLAG_FORCE) $(RM_FLAG_RECURSE) .tmp_dist ../fdict-*.tar.gz)
 
 dist: dist-assemble

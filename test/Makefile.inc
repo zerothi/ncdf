@@ -74,7 +74,7 @@ tst_ncdf_crt: tst_ncdf_crt.o
 
 .PHONY: clean-test
 clean-test:
-	-rm -f $(TEST) $(LIB_TEST) $(TEST_COMMON) *.o *.mod *.nc
+	-$(RM) $(RM_FLAG_FORCE) $(TEST) $(LIB_TEST) $(TEST_COMMON) *.o *.mod *.nc
 
 clean: clean-test
 
