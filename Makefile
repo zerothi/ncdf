@@ -61,7 +61,7 @@ ifneq ($(MPI),0)
  FPPFLAGS += -DNCDF_PARALLEL
 endif
 
-ifneq (,$(findstring NCDF_PARALLEL,$(FPPFLAGS)))
+ifneq (,$(findstring -DNCDF_PARALLEL,$(FPPFLAGS)))
  MPI=1
 endif
 
@@ -73,7 +73,7 @@ ifeq ($(CDF),4)
 endif
 
 # Force if set by the user
-ifneq (,$(findstring NCDF_4,$(FPPFLAGS)))
+ifneq (,$(findstring -DNCDF_4,$(FPPFLAGS)))
  CDF = 4
 endif
 
