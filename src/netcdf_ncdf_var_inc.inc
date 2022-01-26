@@ -81,14 +81,13 @@ end subroutine ROUTINE3(get_var,VAR,name)
 #else
 
 #if DIM == 0
-subroutine ROUTINE2(def_fill,VAR)(this, name, fill_val, fill)
+subroutine ROUTINE2(def_fill,VAR)(this, name, fill_value, fill)
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
-  VAR_TYPE, intent(in) :: fill_val ! non-optional to allow interfacing
+  VAR_TYPE, intent(in) :: fill_value ! non-optional to allow interfacing
   integer, intent(in), optional :: fill
   integer :: lfill
   VAR_TYPE :: lfill_val	
-  integer :: tmp_lr
 #ifdef COMPLEX_DTYPE
   REAL_TYPE :: lr
   integer :: id(2)
@@ -100,28 +99,28 @@ subroutine ROUTINE2(def_fill,VAR)(this, name, fill_val, fill)
 
   call ncdf_redef(this)
 
-  call ncdf_inq_var(this,name,id=id,fill=lfill,fill_val=lfill_val)
+  call ncdf_inq_var(this,name,id=id,fill=lfill,fill_value=lfill_val)
   if ( present(fill) ) lfill = fill
-  lfill_val = fill_val
+  lfill_val = fill_value
 
 #ifdef COMPLEX_DTYPE
   lr = real(lfill_val, COMPLEX_DTYPE)
-  call ncdf_err(nf90_def_var_fill(this%id, id(1), lfill, tmp_lr), &
+  call ncdf_err(nf90_def_var_fill(this%id, id(1), lfill, lr), &
        'Setting fill (VAR) Re'/ /trim(name)/ /' in file: '/ /this)
   lr = aimag(lfill_val)
-  call ncdf_err(nf90_def_var_fill(this%id, id(2), lfill, tmp_lr), &
+  call ncdf_err(nf90_def_var_fill(this%id, id(2), lfill, lr), &
        'Setting fill (VAR) Im'/ /trim(name)/ /' in file: '/ /this)
 #else
-  call ncdf_err(nf90_def_var_fill(this%id, id, lfill, tmp_lr), &
+  call ncdf_err(nf90_def_var_fill(this%id, id, lfill, lfill_val), &
        'Setting fill (VAR) variable, '/ /trim(name)/ /' in file: '/ /this)
 #endif
 end subroutine ROUTINE2(def_fill,VAR)
 
-subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
+subroutine ROUTINE2(inq_var,VAR)(this, name,fill_value,exist,id,size,atts,fill)
   use dictionary
   type(hNCDF), intent(inout) :: this
   character(len=*), intent(in) :: name
-  VAR_TYPE, intent(out) :: fill_val ! non-optional to allow interfacing
+  VAR_TYPE, intent(out) :: fill_value ! non-optional to allow interfacing
   logical, intent(out), optional  :: exist
 #ifdef COMPLEX_DTYPE
   integer, intent(out), optional  :: id(2)
@@ -132,7 +131,6 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
   type(dictionary_t), intent(inout), optional :: atts
   integer, intent(out), optional :: fill
   integer :: lid, lfill
-  integer :: tmp_lr
 #ifdef COMPLEX_DTYPE
   REAL_TYPE :: lfill_valr,lfill_valc
 #else
@@ -145,12 +143,12 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
      if ( .not. exist ) return
   end if
   if ( present(id) ) id(1) = lid
-  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
+  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, lfill_valr), &
        'Retrieving variable-fill (VAR) Re-'/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) fill = lfill
   call ncdf_inq_var_def(this,'Im'/ /name,id=lid,size=size,atts=atts)
   if ( present(id) ) id(2) = lid
-  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
+  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, lfill_valc), &
        'Retrieving variable-fill (VAR) Im-'/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) then
      if ( fill /= lfill ) then	
@@ -158,21 +156,17 @@ subroutine ROUTINE2(inq_var,VAR)(this, name,fill_val,exist,id,size,atts,fill)
 	  ' are not the same. This is not allowed.')
      end if
   end if
-!  if ( present(fill_val) ) then
-     !fill_val = cmplx(lfill_valr,lfill_valc, COMPLEX_DTYPE)
-     fill_val = cmplx(0,0, COMPLEX_DTYPE)
-!  end if
+  fill_value = cmplx(lfill_valr,lfill_valc, COMPLEX_DTYPE)
 #else
   call ncdf_inq_var_def(this,name,id=lid,exist=exist,size=size,atts=atts)
   if ( present(exist) ) then
      if ( .not. exist ) return
   end if
   if ( present(id) ) id = lid
-  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, tmp_lr), &
+  call ncdf_err(nf90_inq_var_fill(this%id, lid, lfill, lfill_val), &
        'Retrieving variable-fill (VAR) '/ /trim(name)/ /' in file: '/ /this)
   if ( present(fill) ) fill = lfill
-  !if ( present(fill_val) ) fill_val = lfill_val
-  fill_val = 0.
+  fill_value = lfill_val
 #endif
 end subroutine ROUTINE2(inq_var,VAR)
 

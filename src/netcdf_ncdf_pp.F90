@@ -1789,7 +1789,7 @@ contains
     integer :: lf, lof
 
     ! option collect
-    lf = NF90_NOFILL
+    lf = NF90_FILL
     if ( present(fill) ) lf = fill
 
     call ncdf_err(nf90_set_fill(this%id,lf, lof), &

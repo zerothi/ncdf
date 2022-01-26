@@ -6,6 +6,7 @@ TEST_COMMON = tst_ncdf_utils.o
 
 TEST_EXE_  = tst_ncdf_3 tst_ncdf_4 tst_ncdf_att
 TEST_EXE_ += tst_ncdf_crt
+TEST_EXE_ += tst_ncdf_var_fill
 
 TEST ?= $(TEST_EXE_)
 
@@ -51,6 +52,13 @@ endif
 
 
 tst_ncdf_4: tst_ncdf_4.o
+	$(FC) -o $@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
+	./$@
+ifeq ($(MPI),1)
+	mpirun -np 2 ./$@
+endif
+
+tst_ncdf_var_fill: tst_ncdf_var_fill.o
 	$(FC) -o $@ $(FFLAGS) $(INCLUDES) $^ $(LIBS) $(LDFLAGS)
 	./$@
 ifeq ($(MPI),1)
