@@ -61,8 +61,13 @@ ifneq ($(MPI),0)
  FPPFLAGS += -DNCDF_PARALLEL
 endif
 
+ifneq (,$(findstring -UNCDF_PARALLEL,$(FPPFLAGS)))
+ # user wants to disable NCDF_PARALLEL
+ MPI=0
+else
 ifneq (,$(findstring -DNCDF_PARALLEL,$(FPPFLAGS)))
  MPI=1
+endif
 endif
 
 #### NetCDF-4 API
@@ -73,8 +78,13 @@ ifeq ($(CDF),4)
 endif
 
 # Force if set by the user
+ifneq (,$(findstring -UNCDF_4,$(FPPFLAGS)))
+ # user wants to disable NCDF_4
+ CDF = 3
+else
 ifneq (,$(findstring -DNCDF_4,$(FPPFLAGS)))
  CDF = 4
+endif
 endif
 
 # The linker is a fortran compiler
