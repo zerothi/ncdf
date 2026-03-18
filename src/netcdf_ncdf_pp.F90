@@ -121,14 +121,14 @@ module netcdf_ncdf
   end interface operator (/ /)
 
   ! Interface
-  interface parallel
-     module procedure parallel_
-  end interface parallel
-  private :: parallel_
-  interface parallel_io
-     module procedure parallel_io_
-  end interface parallel_io
-  private :: parallel_io_
+  interface ncdf_is_parallel
+     module procedure ncdf_is_parallel_
+  end interface
+  private :: ncdf_is_parallel_
+  interface ncdf_is_parallel_io
+     module procedure ncdf_is_parallel_io_
+  end interface
+  private :: ncdf_is_parallel_io_
 
   ! Interface for creating variables
   interface ncdf_def_var
@@ -167,13 +167,13 @@ contains
   ! Every routine in this module needs NetCDF
   ! So it is sourrounded by this...
 
-  function parallel_(this) result(par)
+  function ncdf_is_parallel_(this) result(par)
     type(hNCDF), intent(in) :: this
     logical :: par
     par = this%parallel
-  end function parallel_
+  end function ncdf_is_parallel_
 
-  function parallel_io_(this) result(par)
+  function ncdf_is_parallel_io_(this) result(par)
     type(hNCDF), intent(in) :: this
     logical :: par
     par = iand(NF90_MPIIO,this%mode) == NF90_MPIIO
@@ -181,7 +181,7 @@ contains
     par = iand(NF90_MPIPOSIX,this%mode) == NF90_MPIPOSIX
     if ( par ) return
     par = iand(NF90_PNETCDF,this%mode) == NF90_PNETCDF
-  end function parallel_io_
+  end function ncdf_is_parallel_io_
 
   subroutine ncdf_copy(this,copy)
     type(hNCDF), intent(in) :: this
